@@ -15,7 +15,7 @@ description: Run the Alex → Cass → Nigel → Codey pipeline to implement a f
 | `{STORIES}` | `{FEAT_DIR}/*.md` (excluding FEATURE_SPEC.md) |
 | `{TEST_DIR}` | `./test/artifacts/feature_{slug}` |
 | `{TEST_FILE}` | `./test/feature_{slug}.test.js` |
-| `{PLAN}` | `./plans/feature_{slug}-plan.md` |
+| `{PLAN}` | `{FEAT_DIR}/IMPLEMENTATION_PLAN.md` |
 | `{QUEUE}` | `.claude/implement-queue.json` |
 
 ## Invocation
@@ -56,7 +56,7 @@ Check `{SYS_SPEC}` exists. If not: run Alex to create it, then **stop for review
 - No slug → ask: new feature, update story, update feature spec, update system spec
 
 ### 5. Initialize
-Create/read `{QUEUE}`. Ensure dirs exist: `plans/`, `test/artifacts/`, `.blueprint/system_specification/`
+Create/read `{QUEUE}`. Ensure dirs exist: `test/artifacts/`, `.blueprint/system_specification/`
 
 ---
 
@@ -164,7 +164,7 @@ Run `npm test`. On success: move to completed, proceed to commit (unless `--no-c
 ### 11. Auto-commit
 
 ```bash
-git add {FEAT_DIR}/ {TEST_DIR}/ {TEST_FILE} {PLAN}
+git add {FEAT_DIR}/ {TEST_DIR}/ {TEST_FILE}
 # Add implementation files
 ```
 

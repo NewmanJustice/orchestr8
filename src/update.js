@@ -78,11 +78,18 @@ async function update() {
     }
   }
 
-  // Update SKILL.md
-  const answer = await prompt('\nUpdate SKILL.md? (Y/n): ');
+  // Update SKILL.md and .claude/commands/implement-feature.md
+  const answer = await prompt('\nUpdate SKILL.md and .claude/commands/implement-feature.md? (Y/n): ');
   if (answer !== 'n' && answer !== 'no') {
     fs.copyFileSync(skillSrc, skillDest);
     console.log('Updated SKILL.md');
+
+    // Also update the Claude Code skill command
+    const skillCommandDest = path.join(TARGET_DIR, '.claude', 'commands', 'implement-feature.md');
+    if (fs.existsSync(path.dirname(skillCommandDest))) {
+      fs.copyFileSync(skillSrc, skillCommandDest);
+      console.log('Updated .claude/commands/implement-feature.md');
+    }
   }
 
   console.log(`
@@ -93,6 +100,7 @@ Updated:
   - .blueprint/templates/
   - .blueprint/ways_of_working/
   - SKILL.md
+  - .claude/commands/implement-feature.md (if exists)
 
 Preserved:
   - .blueprint/features/

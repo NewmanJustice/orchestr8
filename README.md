@@ -17,13 +17,13 @@ A multi-agent workflow framework for automated feature development. Four special
 npx orchestr8 init
 ```
 
-This installs the `.blueprint/` directory and `SKILL.md` into your project. If files already exist, you'll be prompted before overwriting. It also adds the workflow queue to `.gitignore`.
+This installs the `.blueprint/` directory, `.business_context/`, and the `/implement-feature` skill to `.claude/commands/`. If files already exist, you'll be prompted before overwriting. It also adds the workflow queue to `.gitignore`.
 
 ### Commands
 
 | Command | Description |
 |---------|-------------|
-| `npx orchestr8 init` | Initialize `.blueprint/` and `SKILL.md` in your project |
+| `npx orchestr8 init` | Initialize `.blueprint/`, `.business_context/`, and skill in your project |
 | `npx orchestr8 update` | Update agents, templates, and rituals to latest version |
 | `npx orchestr8 add-skills [agent]` | Install recommended skills for an agent (alex, cass, nigel, codey, all) |
 | `npx orchestr8 skills [agent]` | List recommended skills |
@@ -82,11 +82,13 @@ your-project/
 │   │   ├── SYSTEM_SPEC.md
 │   │   └── FEATURE_SPEC.md
 │   ├── ways_of_working/           # Development rituals
-│   ├── features/                  # Feature specs (created per feature)
-│   └── system_specification/      # System spec (created on first run)
+│   ├── features/                  # Feature specs (populated per feature)
+│   └── system_specification/      # System spec (populated on first run)
 ├── .business_context/             # Business context documents
 │   └── README.md
-└── SKILL.md
+└── .claude/
+    └── commands/
+        └── implement-feature.md   # The /implement-feature skill
 ```
 
 ## How It Works

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const { addSkills } = require('./skills');
 
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const TARGET_DIR = process.cwd();
@@ -63,7 +64,8 @@ async function init() {
   const businessContextSrc = path.join(PACKAGE_ROOT, '.business_context');
   const businessContextDest = path.join(TARGET_DIR, '.business_context');
   const skillSrc = path.join(PACKAGE_ROOT, 'SKILL.md');
-  const skillDest = path.join(TARGET_DIR, 'SKILL.md');
+  const claudeCommandsDir = path.join(TARGET_DIR, '.claude', 'commands');
+  const skillCommandDest = path.join(claudeCommandsDir, 'implement-feature.md');
 
   // Check if .blueprint already exists
   if (fs.existsSync(blueprintDest)) {
@@ -75,18 +77,19 @@ async function init() {
     fs.rmSync(blueprintDest, { recursive: true });
   }
 
-  // Check if SKILL.md already exists
-  if (fs.existsSync(skillDest)) {
-    const answer = await prompt('SKILL.md already exists. Overwrite? (y/N): ');
+  // Copy skill to .claude/commands/ for Claude Code discovery
+  fs.mkdirSync(claudeCommandsDir, { recursive: true });
+  if (fs.existsSync(skillCommandDest)) {
+    const answer = await prompt('.claude/commands/implement-feature.md already exists. Overwrite? (y/N): ');
     if (answer !== 'y' && answer !== 'yes') {
-      console.log('Skipping SKILL.md');
+      console.log('Skipping skill command');
     } else {
-      fs.copyFileSync(skillSrc, skillDest);
-      console.log('Copied SKILL.md');
+      fs.copyFileSync(skillSrc, skillCommandDest);
+      console.log('Copied skill to .claude/commands/implement-feature.md');
     }
   } else {
-    fs.copyFileSync(skillSrc, skillDest);
-    console.log('Copied SKILL.md');
+    fs.copyFileSync(skillSrc, skillCommandDest);
+    console.log('Copied skill to .claude/commands/implement-feature.md');
   }
 
   // Copy .blueprint directory
@@ -106,8 +109,12 @@ async function init() {
   // Update .gitignore
   updateGitignore();
 
+  // Install agent skills
+  console.log('\nInstalling agent skills...');
+  await addSkills('all');
+
   console.log(`
-agent-workflow initialized successfully!
+orchestr8 initialized successfully!
 
 Next steps:
 1. Add business context documents to .business_context/

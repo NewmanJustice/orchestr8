@@ -41,7 +41,8 @@ function updateGitignore() {
   const gitignorePath = path.join(TARGET_DIR, '.gitignore');
   const entriesToAdd = [
     '# agent-workflow',
-    '.claude/implement-queue.json'
+    '.claude/implement-queue.json',
+    '.claude/pipeline-history.json'
   ];
 
   let content = '';

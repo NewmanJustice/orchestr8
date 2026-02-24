@@ -5,10 +5,21 @@ const { update } = require('../src/update');
 const { addSkills, listSkills } = require('../src/skills');
 const { displayQueue, resetQueue } = require('../src/orchestrator');
 const { validate, formatOutput } = require('../src/validate');
+const { displayHistory, showStats, clearHistory } = require('../src/history');
 
 const args = process.argv.slice(2);
 const command = args[0];
 const subArg = args[1];
+
+function parseFlags(args) {
+  const flags = {};
+  for (const arg of args) {
+    if (arg === '--all') flags.all = true;
+    if (arg === '--stats') flags.stats = true;
+    if (arg === '--force') flags.force = true;
+  }
+  return flags;
+}
 
 const commands = {
   init: {
@@ -47,6 +58,19 @@ const commands = {
     },
     description: 'Run pre-flight checks to validate project configuration'
   },
+  history: {
+    fn: async () => {
+      const flags = parseFlags(args);
+      if (subArg === 'clear') {
+        await clearHistory({ force: flags.force });
+      } else if (flags.stats) {
+        showStats();
+      } else {
+        displayHistory({ all: flags.all });
+      }
+    },
+    description: 'View pipeline execution history'
+  },
   help: {
     fn: showHelp,
     description: 'Show this help message'
@@ -66,6 +90,11 @@ Commands:
   skills [agent]        List recommended skills for agents
   queue                 Show current queue state for /implement-feature pipeline
   queue reset           Clear the queue and reset all state
+  history               View recent pipeline runs (last 10 by default)
+  history --all         View all pipeline runs
+  history --stats       View aggregate statistics
+  history clear         Clear all pipeline history (with confirmation)
+  history clear --force Clear all pipeline history (no confirmation)
   validate              Run pre-flight checks to validate project configuration
   help                  Show this help message
 
@@ -77,6 +106,9 @@ Examples:
   npx agent-workflow skills
   npx agent-workflow queue
   npx agent-workflow queue reset
+  npx agent-workflow history
+  npx agent-workflow history --stats
+  npx agent-workflow history clear --force
   npx agent-workflow validate
 `);
 }

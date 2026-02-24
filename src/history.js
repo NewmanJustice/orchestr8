@@ -45,6 +45,50 @@ function recordHistory(entry) {
   }
 }
 
+/**
+ * Stores feedback for a specific stage in a feature's history entry.
+ * Per FEATURE_SPEC.md - feedback is stored at stages[stage].feedback
+ * @param {string} slug - Feature slug
+ * @param {string} stage - Stage name (alex, cass, nigel, etc.)
+ * @param {object} feedback - Feedback object to store
+ * @returns {boolean} True if stored successfully
+ */
+function storeStageFeedback(slug, stage, feedback) {
+  try {
+    const history = readHistoryFile();
+    if (history.error) {
+      console.warn('Warning: History file is corrupted, cannot store feedback.');
+      return false;
+    }
+
+    // Find the most recent entry for this slug
+    const entry = history.findLast(e => e.slug === slug);
+    if (!entry) {
+      console.warn(`Warning: No history entry found for slug: ${slug}`);
+      return false;
+    }
+
+    // Ensure stages object exists
+    if (!entry.stages) {
+      entry.stages = {};
+    }
+
+    // Ensure stage object exists
+    if (!entry.stages[stage]) {
+      entry.stages[stage] = {};
+    }
+
+    // Store feedback
+    entry.stages[stage].feedback = feedback;
+
+    writeHistoryFile(history);
+    return true;
+  } catch (err) {
+    console.warn(`Warning: Failed to store feedback: ${err.message}`);
+    return false;
+  }
+}
+
 function formatDuration(ms) {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -254,6 +298,7 @@ module.exports = {
   readHistoryFile,
   writeHistoryFile,
   recordHistory,
+  storeStageFeedback,
   displayHistory,
   showStats,
   clearHistory,

@@ -363,6 +363,131 @@ function displayInsights(options = {}) {
   }
 }
 
+/**
+ * Calculates agent calibration score based on prediction accuracy.
+ * Per FEATURE_SPEC.md:Rule 4.
+ * @param {string} agent - Agent name (alex, cass, nigel)
+ * @param {Array} history - History entries
+ * @returns {number|null} Calibration score 0-1, or null if insufficient data
+ */
+function calculateCalibration(agent, history) {
+  const entries = history.filter(e => e.stages?.[agent]?.feedback);
+  if (entries.length < 10) return null;
+
+  let matches = 0;
+  for (const entry of entries) {
+    const rating = entry.stages[agent].feedback.rating;
+    const success = entry.status === 'success';
+    const predicted = rating >= 3;
+    if (predicted === success) matches++;
+  }
+  return matches / entries.length;
+}
+
+/**
+ * Correlates issue codes with failure rates.
+ * @param {Array} history - History entries
+ * @returns {object} Map of issue code to failure correlation (0-1)
+ */
+function correlateIssues(history) {
+  const issueCounts = {};
+  const issueFailures = {};
+
+  for (const entry of history) {
+    for (const stage of Object.values(entry.stages || {})) {
+      if (stage.feedback?.issues) {
+        for (const issue of stage.feedback.issues) {
+          issueCounts[issue] = (issueCounts[issue] || 0) + 1;
+          if (entry.status === 'failed') {
+            issueFailures[issue] = (issueFailures[issue] || 0) + 1;
+          }
+        }
+      }
+    }
+  }
+
+  const correlations = {};
+  for (const issue of Object.keys(issueCounts)) {
+    correlations[issue] = (issueFailures[issue] || 0) / issueCounts[issue];
+  }
+  return correlations;
+}
+
+/**
+ * Recommends optimal threshold based on historical data.
+ * @param {Array} history - History entries
+ * @returns {number} Recommended threshold value
+ */
+function recommendThreshold(history) {
+  let best = 3.0;
+  for (const t of [2, 2.5, 3, 3.5, 4]) {
+    const correct = history.filter(e => {
+      const r = e.stages?.cass?.feedback?.rating || 3;
+      const pred = r >= t;
+      return pred === (e.status === 'success');
+    }).length;
+    if (correct > history.length * 0.7) best = t;
+  }
+  return best;
+}
+
+/**
+ * Displays feedback-specific insights.
+ * @param {object} options - Display options
+ */
+function displayFeedbackInsights(options = {}) {
+  const history = readHistoryFile();
+
+  if (history.error === 'corrupted') {
+    console.log("Warning: History file is corrupted.");
+    return;
+  }
+
+  if (!history || history.length === 0) {
+    console.log('No pipeline history found.');
+    return;
+  }
+
+  console.log('\nFeedback Insights\n');
+
+  // Agent calibration
+  console.log('AGENT CALIBRATION');
+  for (const agent of ['alex', 'cass', 'nigel']) {
+    const calibration = calculateCalibration(agent, history);
+    if (calibration === null) {
+      console.log(`  ${agent.padEnd(8)}: Insufficient data (<10 runs)`);
+    } else {
+      const pct = Math.round(calibration * 100);
+      console.log(`  ${agent.padEnd(8)}: ${pct}% accuracy`);
+    }
+  }
+  console.log('');
+
+  // Issue correlations
+  const correlations = correlateIssues(history);
+  if (Object.keys(correlations).length > 0) {
+    console.log('ISSUE CORRELATIONS');
+    const sorted = Object.entries(correlations)
+      .sort(([, a], [, b]) => b - a);
+    for (const [issue, corr] of sorted) {
+      const pct = Math.round(corr * 100);
+      console.log(`  ${issue.padEnd(24)}: ${pct}% failure rate`);
+    }
+    console.log('');
+  }
+
+  // Threshold recommendation
+  const entriesWithFeedback = history.filter(e =>
+    Object.values(e.stages || {}).some(s => s.feedback)
+  );
+  if (entriesWithFeedback.length >= 10) {
+    const recommended = recommendThreshold(history);
+    console.log('RECOMMENDATIONS');
+    console.log(`  Suggested minRatingThreshold: ${recommended}`);
+    console.log('');
+  }
+}
+
 module.exports = {
   displayInsights,
   analyzeBottlenecks,
@@ -370,5 +495,10 @@ module.exports = {
   detectAnomalies,
   analyzeTrends,
   calculateMean,
-  calculateStdDev
+  calculateStdDev,
+  // Feedback analysis exports
+  calculateCalibration,
+  correlateIssues,
+  recommendThreshold,
+  displayFeedbackInsights
 };

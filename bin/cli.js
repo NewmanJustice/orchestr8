@@ -8,6 +8,12 @@ const { validate, formatOutput } = require('../src/validate');
 const { displayHistory, showStats, clearHistory } = require('../src/history');
 const { displayInsights } = require('../src/insights');
 const { displayConfig, setConfigValue, resetConfig } = require('../src/retry');
+const {
+  displayConfig: displayFeedbackConfig,
+  setConfigValue: setFeedbackConfigValue,
+  resetConfig: resetFeedbackConfig
+} = require('../src/feedback');
+const { displayFeedbackInsights } = require('../src/insights');
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -22,6 +28,7 @@ function parseFlags(args) {
     if (arg === '--bottlenecks') flags.bottlenecks = true;
     if (arg === '--failures') flags.failures = true;
     if (arg === '--json') flags.json = true;
+    if (arg === '--feedback') flags.feedback = true;
   }
   return flags;
 }
@@ -79,11 +86,15 @@ const commands = {
   insights: {
     fn: () => {
       const flags = parseFlags(args);
-      displayInsights({
-        bottlenecks: flags.bottlenecks,
-        failures: flags.failures,
-        json: flags.json
-      });
+      if (flags.feedback) {
+        displayFeedbackInsights({ json: flags.json });
+      } else {
+        displayInsights({
+          bottlenecks: flags.bottlenecks,
+          failures: flags.failures,
+          json: flags.json
+        });
+      }
     },
     description: 'Analyze pipeline history for bottlenecks, failures, and trends'
   },
@@ -106,6 +117,26 @@ const commands = {
       }
     },
     description: 'Manage retry configuration for adaptive retry logic'
+  },
+  'feedback-config': {
+    fn: () => {
+      if (subArg === 'set') {
+        const key = args[2];
+        const value = args[3];
+        if (!key || !value) {
+          console.error('Usage: feedback-config set <key> <value>');
+          console.error('Valid keys: minRatingThreshold, enabled');
+          process.exit(1);
+        }
+        setFeedbackConfigValue(key, value);
+      } else if (subArg === 'reset') {
+        resetFeedbackConfig();
+        console.log('Feedback configuration reset to defaults.');
+      } else {
+        displayFeedbackConfig();
+      }
+    },
+    description: 'Manage feedback loop configuration'
   },
   help: {
     fn: showHelp,
@@ -134,10 +165,14 @@ Commands:
   insights              Analyze pipeline for bottlenecks, failures, and trends
   insights --bottlenecks Show only bottleneck analysis
   insights --failures   Show only failure patterns
+  insights --feedback   Show feedback loop insights (calibration, correlations)
   insights --json       Output analysis as JSON
   retry-config          View current retry configuration
   retry-config set <key> <value>  Modify a config value (maxRetries, windowSize, highFailureThreshold)
   retry-config reset    Reset retry configuration to defaults
+  feedback-config       View current feedback loop configuration
+  feedback-config set <key> <value>  Modify a config value (minRatingThreshold, enabled)
+  feedback-config reset Reset feedback configuration to defaults
   validate              Run pre-flight checks to validate project configuration
   help                  Show this help message
 
@@ -152,6 +187,8 @@ Examples:
   npx agent-workflow history
   npx agent-workflow history --stats
   npx agent-workflow history clear --force
+  npx agent-workflow insights --feedback
+  npx agent-workflow feedback-config
   npx agent-workflow validate
 `);
 }

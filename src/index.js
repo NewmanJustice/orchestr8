@@ -2,7 +2,7 @@ const { init } = require('./init');
 const { update } = require('./update');
 const { addSkills, listSkills, AGENT_SKILLS } = require('./skills');
 const { validate, formatOutput, checkNodeVersion } = require('./validate');
-const { recordHistory, displayHistory, showStats, clearHistory } = require('./history');
+const { recordHistory, displayHistory, showStats, clearHistory, storeStageFeedback } = require('./history');
 const {
   readConfig,
   writeConfig,
@@ -10,8 +10,22 @@ const {
   calculateFailureRate,
   recommendStrategy,
   applyStrategy,
-  shouldRetry
+  shouldRetry,
+  mapIssuesToStrategies
 } = require('./retry');
+const {
+  validateFeedback,
+  shouldPause,
+  getDefaultConfig: getFeedbackDefaultConfig,
+  readConfig: readFeedbackConfig,
+  writeConfig: writeFeedbackConfig
+} = require('./feedback');
+const {
+  calculateCalibration,
+  correlateIssues,
+  recommendThreshold,
+  displayFeedbackInsights
+} = require('./insights');
 
 module.exports = {
   init,
@@ -26,6 +40,7 @@ module.exports = {
   displayHistory,
   showStats,
   clearHistory,
+  storeStageFeedback,
   // Retry module exports
   readConfig,
   writeConfig,
@@ -33,5 +48,17 @@ module.exports = {
   calculateFailureRate,
   recommendStrategy,
   applyStrategy,
-  shouldRetry
+  shouldRetry,
+  mapIssuesToStrategies,
+  // Feedback module exports
+  validateFeedback,
+  shouldPause,
+  getFeedbackDefaultConfig,
+  readFeedbackConfig,
+  writeFeedbackConfig,
+  // Feedback insights exports
+  calculateCalibration,
+  correlateIssues,
+  recommendThreshold,
+  displayFeedbackInsights
 };

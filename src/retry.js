@@ -226,6 +226,38 @@ function setConfigValue(key, value) {
   console.log(`Set ${key} = ${numValue}`);
 }
 
+/**
+ * Maps feedback issues to retry strategies using issue mappings config.
+ * Per FEATURE_SPEC.md:Rule 3.
+ * @param {Array} issues - Array of issue codes from feedback
+ * @param {object} config - Config with issueMappings (from feedback config)
+ * @returns {Array} Array of recommended strategies
+ */
+function mapIssuesToStrategies(issues, config) {
+  if (!issues || !Array.isArray(issues) || issues.length === 0) {
+    return ['retry'];
+  }
+
+  const mappings = config?.issueMappings || {
+    'missing-error-handling': 'add-context',
+    'unclear-scope': 'simplify-prompt',
+    'too-complex': 'simplify-prompt',
+    'too-many-stories': 'reduce-stories',
+    'untestable-criteria': 'simplify-tests',
+    'missing-edge-cases': 'add-context'
+  };
+
+  const strategies = [];
+  for (const issue of issues) {
+    const strategy = mappings[issue];
+    if (strategy && !strategies.includes(strategy)) {
+      strategies.push(strategy);
+    }
+  }
+
+  return strategies.length > 0 ? strategies : ['retry'];
+}
+
 module.exports = {
   CONFIG_FILE,
   getDefaultConfig,
@@ -237,5 +269,6 @@ module.exports = {
   applyStrategy,
   shouldRetry,
   displayConfig,
-  setConfigValue
+  setConfigValue,
+  mapIssuesToStrategies
 };

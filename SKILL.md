@@ -18,6 +18,9 @@ description: Run the Alex → Cass → Nigel → Codey pipeline using Task tool 
 | `{TEST_FILE}` | `./test/feature_{slug}.test.js` |
 | `{PLAN}` | `{FEAT_DIR}/IMPLEMENTATION_PLAN.md` |
 | `{QUEUE}` | `.claude/implement-queue.json` |
+| `{HISTORY}` | `.claude/pipeline-history.json` |
+| `{RETRY_CONFIG}` | `.claude/retry-config.json` |
+| `{FEEDBACK_CONFIG}` | `.claude/feedback-config.json` |
 
 ## Invocation
 
@@ -26,6 +29,9 @@ description: Run the Alex → Cass → Nigel → Codey pipeline using Task tool 
 /implement-feature "user-auth"                        # New feature
 /implement-feature "user-auth" --pause-after=alex|cass|nigel|codey-plan
 /implement-feature "user-auth" --no-commit
+/implement-feature "user-auth" --no-feedback          # Skip feedback collection
+/implement-feature "user-auth" --no-validate          # Skip pre-flight validation
+/implement-feature "user-auth" --no-history           # Skip history recording
 ```
 
 ## Pipeline Overview
@@ -35,14 +41,23 @@ description: Run the Alex → Cass → Nigel → Codey pipeline using Task tool 
        │
        ▼
 ┌─────────────────────────────────────────┐
+│ 0. Pre-flight validation (validate.js)  │
 │ 1. Parse args, get slug                 │
 │ 2. Check system spec exists (gate)      │
-│ 3. Initialize queue                     │
-│ 4. Route based on flags/state           │
+│ 3. Show insights preview (insights.js)  │
+│ 4. Initialize queue + history entry     │
+│ 5. Route based on flags/state           │
 └─────────────────────────────────────────┘
        │
        ▼
-   SPAWN ALEX → SPAWN CASS → SPAWN NIGEL → SPAWN CODEY → AUTO-COMMIT
+   ALEX → [feedback] → CASS → [feedback] → NIGEL → [feedback] → CODEY
+       │                                                           │
+       └──────────── Record timing in history.js ──────────────────┘
+       │                                                           │
+       └──────────── On failure: retry.js strategy ────────────────┘
+       │
+       ▼
+   AUTO-COMMIT → Record completion in history
 ```
 
 ## Output Constraints (CRITICAL)
@@ -57,6 +72,33 @@ description: Run the Alex → Cass → Nigel → Codey pipeline using Task tool 
 
 ---
 
+## Step 0: Pre-flight Validation (NEW)
+
+**Module:** `src/validate.js`
+
+Unless `--no-validate` flag is set:
+
+```bash
+# Run validation checks
+node bin/cli.js validate
+```
+
+**Checks performed:**
+- Required directories exist (`.blueprint/`, `.business_context/`)
+- System spec exists
+- All 4 agent spec files present
+- Business context has content
+- Skills installed
+- Node.js version >= 18
+
+**On validation failure:**
+- Show which checks failed with fix suggestions
+- Ask user: "Fix issues and retry?" or "Continue anyway?" or "Abort"
+
+**On validation success:** Continue to Step 1
+
+---
+
 ## Steps 1-5: Setup
 
 ### Step 1: Parse Arguments
@@ -68,6 +110,23 @@ If not provided: Ask user, convert to slug format (lowercase, hyphens), confirm.
 ### Step 3: System Spec Gate
 Check `{SYS_SPEC}` exists. If not: run Alex to create it, then **stop for review**.
 
+### Step 3.5: Insights Preview (NEW)
+
+**Module:** `src/insights.js`
+
+Unless `--no-history` flag is set, show pipeline insights:
+
+```bash
+node bin/cli.js insights --json 2>/dev/null
+```
+
+**Display to user:**
+- Recent success rate (e.g., "Last 10 runs: 85% success")
+- Estimated duration (e.g., "Estimated: ~12 min based on history")
+- Any warnings (e.g., "Note: Nigel stage has 30% failure rate recently")
+
+If no history exists, skip this step silently.
+
 ### Step 4: Route
 - Slug exists at `{FEAT_DIR}` → ask: continue from last state or restart
 - No slug → new feature pipeline
@@ -75,9 +134,25 @@ Check `{SYS_SPEC}` exists. If not: run Alex to create it, then **stop for review
 ### Step 5: Initialize
 Create/read `{QUEUE}`. Ensure dirs exist: `mkdir -p {FEAT_DIR} {TEST_DIR}`
 
+**History Integration (NEW):**
+
+Unless `--no-history` flag is set, start a history entry:
+
+```javascript
+// Conceptual - orchestrator tracks this in memory
+historyEntry = {
+  slug: "{slug}",
+  startedAt: new Date().toISOString(),
+  stages: {},
+  feedback: {}
+}
+```
+
 ---
 
 ## Step 6: Spawn Alex Agent
+
+**History:** Record `stages.alex.startedAt` before spawning.
 
 Use the Task tool with `subagent_type="general-purpose"`:
 
@@ -110,14 +185,43 @@ Brief summary (5 bullets max): intent, key behaviours, scope, story themes, tens
 
 **On completion:**
 1. Verify `{FEAT_SPEC}` exists
-2. Update queue: move feature to `cassQueue`
-3. If `--pause-after=alex`: Show output path, ask user to continue
+2. **Record history:** `stages.alex = { completedAt, durationMs, status: "success" }`
+3. Update queue: move feature to `cassQueue`
+4. If `--pause-after=alex`: Show output path, ask user to continue
 
-**On failure:** Ask user (retry / skip / abort)
+**On failure:** See [Error Handling with Retry](#error-handling-with-smart-retry)
+
+---
+
+## Step 6.5: Cass Feedback on Alex (NEW)
+
+**Module:** `src/feedback.js`
+
+Unless `--no-feedback` flag is set, collect feedback before Cass writes stories:
+
+**Prompt addition to Cass:**
+```
+FIRST, before writing stories, evaluate Alex's feature spec:
+- Rating (1-5): How clear and complete is the spec?
+- Issues: List any problems (e.g., "missing-error-handling", "unclear-scope")
+- Recommendation: "proceed" | "pause" | "revise"
+
+Output your feedback as:
+FEEDBACK: { "rating": N, "issues": [...], "recommendation": "..." }
+```
+
+**Quality Gate Check:**
+- If rating < minRatingThreshold (default 3.0) OR recommendation = "pause"
+- Ask user: "Cass rated Alex's spec {N}/5. Issues: {issues}. Continue anyway?"
+- Options: Continue / Review spec / Abort
+
+**Store feedback:** `feedback.cass = { about: "alex", rating, issues, recommendation }`
 
 ---
 
 ## Step 7: Spawn Cass Agent
+
+**History:** Record `stages.cass.startedAt` before spawning.
 
 Use the Task tool with `subagent_type="general-purpose"`:
 
@@ -155,14 +259,40 @@ Brief summary: story count, filenames, behaviours covered (5 bullets max)
 
 **On completion:**
 1. Verify at least one `story-*.md` exists in `{FEAT_DIR}`
-2. Update queue: move feature to `nigelQueue`
-3. If `--pause-after=cass`: Show story paths, ask user to continue
+2. **Record history:** `stages.cass = { completedAt, durationMs, status: "success" }`
+3. Update queue: move feature to `nigelQueue`
+4. If `--pause-after=cass`: Show story paths, ask user to continue
 
-**On failure:** Ask user (retry / skip / abort)
+**On failure:** See [Error Handling with Retry](#error-handling-with-smart-retry)
+
+---
+
+## Step 7.5: Nigel Feedback on Cass (NEW)
+
+**Module:** `src/feedback.js`
+
+Unless `--no-feedback` flag is set:
+
+**Prompt addition to Nigel:**
+```
+FIRST, before writing tests, evaluate Cass's user stories:
+- Rating (1-5): How testable are the stories?
+- Issues: List any problems (e.g., "ambiguous-ac", "missing-edge-cases")
+- Recommendation: "proceed" | "pause" | "revise"
+
+Output your feedback as:
+FEEDBACK: { "rating": N, "issues": [...], "recommendation": "..." }
+```
+
+**Quality Gate Check:** Same as Step 6.5
+
+**Store feedback:** `feedback.nigel = { about: "cass", rating, issues, recommendation }`
 
 ---
 
 ## Step 8: Spawn Nigel Agent
+
+**History:** Record `stages.nigel.startedAt` before spawning.
 
 Use the Task tool with `subagent_type="general-purpose"`:
 
@@ -203,14 +333,40 @@ Brief summary: test count, AC coverage %, assumptions (5 bullets max)
 
 **On completion:**
 1. Verify `{TEST_SPEC}` and `{TEST_FILE}` exist
-2. Update queue: move feature to `codeyQueue`
-3. If `--pause-after=nigel`: Show test paths, ask user to continue
+2. **Record history:** `stages.nigel = { completedAt, durationMs, status: "success" }`
+3. Update queue: move feature to `codeyQueue`
+4. If `--pause-after=nigel`: Show test paths, ask user to continue
 
-**On failure:** Ask user (retry / skip / abort)
+**On failure:** See [Error Handling with Retry](#error-handling-with-smart-retry)
+
+---
+
+## Step 8.5: Codey Feedback on Nigel (NEW)
+
+**Module:** `src/feedback.js`
+
+Unless `--no-feedback` flag is set:
+
+**Prompt addition to Codey (Plan phase):**
+```
+FIRST, before creating the plan, evaluate Nigel's tests:
+- Rating (1-5): How implementable are the tests?
+- Issues: List any problems (e.g., "over-mocked", "missing-setup")
+- Recommendation: "proceed" | "pause" | "revise"
+
+Output your feedback as:
+FEEDBACK: { "rating": N, "issues": [...], "recommendation": "..." }
+```
+
+**Quality Gate Check:** Same as Step 6.5
+
+**Store feedback:** `feedback.codey = { about: "nigel", rating, issues, recommendation }`
 
 ---
 
 ## Step 9: Spawn Codey Agent (Plan)
+
+**History:** Record `stages.codeyPlan.startedAt` before spawning.
 
 Use the Task tool with `subagent_type="general-purpose"`:
 
@@ -241,13 +397,16 @@ Plan structure (keep concise - aim for <80 lines total):
 
 **On completion:**
 1. Verify `{PLAN}` exists
-2. If `--pause-after=codey-plan`: Show plan path, ask user to continue
+2. **Record history:** `stages.codeyPlan = { completedAt, durationMs, status: "success" }`
+3. If `--pause-after=codey-plan`: Show plan path, ask user to continue
 
-**On failure:** Ask user (retry / skip / abort)
+**On failure:** See [Error Handling with Retry](#error-handling-with-smart-retry)
 
 ---
 
 ## Step 10: Spawn Codey Agent (Implement)
+
+**History:** Record `stages.codeyImplement.startedAt` before spawning.
 
 Use the Task tool with `subagent_type="general-purpose"`:
 
@@ -289,10 +448,11 @@ Brief summary: files changed (list), test status (X/Y passing), blockers if any
 
 **On completion:**
 1. Run `npm test` to verify
-2. Update queue: move feature to `completed`
-3. Proceed to auto-commit (unless `--no-commit`)
+2. **Record history:** `stages.codeyImplement = { completedAt, durationMs, status: "success" }`
+3. Update queue: move feature to `completed`
+4. Proceed to auto-commit (unless `--no-commit`)
 
-**On failure:** Ask user (retry / skip / abort)
+**On failure:** See [Error Handling with Retry](#error-handling-with-smart-retry)
 
 ---
 
@@ -321,14 +481,33 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-## Step 12: Report Status
+## Step 12: Report Status & Finalize History (ENHANCED)
 
+**Module:** `src/history.js`
+
+Unless `--no-history` flag is set, finalize the history entry:
+
+```javascript
+historyEntry.status = "success";
+historyEntry.completedAt = new Date().toISOString();
+historyEntry.totalDurationMs = completedAt - startedAt;
+historyEntry.commitHash = "{hash}";
+// Save to .claude/pipeline-history.json
+```
+
+**Display summary:**
 ```
 ## Completed
 - feature_{slug}
   - Stories: N
   - Tests: N (all passing)
+  - Duration: X min (avg: Y min)
   - Commit: {hash}
+
+## Feedback Summary
+- Alex spec: rated 4/5 by Cass
+- Cass stories: rated 5/5 by Nigel
+- Nigel tests: rated 4/5 by Codey
 
 ## Next Action
 Pipeline complete. Run `npm test` to verify or `/implement-feature` for next feature.
@@ -336,14 +515,94 @@ Pipeline complete. Run `npm test` to verify or `/implement-feature` for next fea
 
 ---
 
-## Error Handling
+## Error Handling with Smart Retry (ENHANCED)
+
+**Modules:** `src/retry.js`, `src/feedback.js`, `src/insights.js`
 
 After each agent spawn, if the Task tool returns an error or output validation fails:
 
-**Ask the user:**
-1. **Retry** - Re-run the agent with same inputs
-2. **Skip** - Move to next stage anyway (with warning about missing artifacts)
-3. **Abort** - Stop pipeline, update queue with failure for recovery
+### 1. Analyze Failure Context
+
+**Check feedback chain for clues:**
+```
+If Cass flagged "unclear-scope" on Alex's spec
+  → Likely root cause identified
+  → Recommend: "add-context" strategy
+```
+
+**Check history for patterns:**
+```bash
+node bin/cli.js insights --failures --json
+```
+- If this stage has >20% failure rate, suggest alternative strategy
+- If this specific issue pattern correlates with failures, mention it
+
+### 2. Get Retry Strategy Recommendation
+
+**Module:** `src/retry.js`
+
+```
+Strategy recommendation based on:
+- Stage: {stage}
+- Attempt: {attemptNumber}
+- Failure rate: {rate}%
+- Feedback issues: {issues}
+
+Recommended: {strategy}
+```
+
+**Available strategies:**
+| Strategy | Effect |
+|----------|--------|
+| `retry` | Simple retry with same prompt |
+| `simplify-prompt` | Reduce scope: "Focus only on core happy path" |
+| `add-context` | Include more output from previous stages |
+| `reduce-stories` | Ask for fewer, more focused stories |
+| `simplify-tests` | Ask for fewer, essential tests only |
+| `incremental` | Implement one test at a time |
+
+### 3. Ask User with Recommendation
+
+```
+## Stage Failed: {stage}
+
+Feedback context: Cass flagged "unclear-scope" on Alex's spec
+History: This stage fails 25% of the time
+Recommended strategy: add-context
+
+Options:
+1. Retry with "add-context" strategy (recommended)
+2. Retry with simple retry
+3. Skip this stage (warning: missing artifacts)
+4. Abort pipeline
+```
+
+### 4. Apply Strategy and Retry
+
+If user selects a retry strategy, modify the agent prompt:
+
+**Example: add-context strategy**
+```
+[Original prompt]
+
+## Additional Context (added due to retry)
+Previous stage feedback indicated: "unclear-scope"
+Here is additional context from earlier stages:
+- System spec key points: [summary]
+- Feature spec key decisions: [summary]
+```
+
+### 5. Record Failure in History
+
+```javascript
+historyEntry.stages[stage] = {
+  status: "failed",
+  failedAt: "...",
+  attempts: N,
+  lastStrategy: "add-context",
+  feedbackContext: ["unclear-scope"]
+};
+```
 
 **On abort:** Update queue `failed` array with:
 ```json
@@ -351,6 +610,8 @@ After each agent spawn, if the Task tool returns an error or output validation f
   "slug": "{slug}",
   "stage": "{stage}",
   "reason": "{error message}",
+  "feedbackContext": ["issues from feedback chain"],
+  "attemptCount": N,
   "timestamp": "{ISO timestamp}"
 }
 ```
@@ -394,3 +655,52 @@ Run `/implement-feature` again - reads queue and resumes from `current.stage`.
 | Cass | `.blueprint/agents/AGENT_BA_CASS.md` |
 | Nigel | `.blueprint/agents/AGENT_TESTER_NIGEL.md` |
 | Codey | `.blueprint/agents/AGENT_DEVELOPER_CODEY.md` |
+
+---
+
+## Module Integration Summary (NEW)
+
+The pipeline integrates these orchestr8 modules:
+
+| Module | File | Integration Points |
+|--------|------|-------------------|
+| **validate** | `src/validate.js` | Step 0: Pre-flight checks |
+| **history** | `src/history.js` | Steps 5-12: Record timing, finalize entry |
+| **insights** | `src/insights.js` | Step 3.5: Preview, On failure: Analysis |
+| **feedback** | `src/feedback.js` | Steps 6.5, 7.5, 8.5: Quality gates |
+| **retry** | `src/retry.js` | On failure: Strategy recommendation |
+
+### CLI Commands Available
+
+```bash
+# Pre-flight validation
+npx orchestr8 validate
+
+# History management
+npx orchestr8 history
+npx orchestr8 history --stats
+npx orchestr8 history --all
+
+# Pipeline insights
+npx orchestr8 insights
+npx orchestr8 insights --feedback
+npx orchestr8 insights --bottlenecks
+npx orchestr8 insights --failures
+
+# Retry configuration
+npx orchestr8 retry-config
+npx orchestr8 retry-config set maxRetries 5
+
+# Feedback configuration
+npx orchestr8 feedback-config
+npx orchestr8 feedback-config set minRatingThreshold 3.5
+```
+
+### Data Files Created
+
+| File | Purpose |
+|------|---------|
+| `.claude/pipeline-history.json` | Execution history with timing and feedback |
+| `.claude/retry-config.json` | Retry strategies and thresholds |
+| `.claude/feedback-config.json` | Feedback quality gate thresholds |
+| `.claude/implement-queue.json` | Pipeline queue state (existing) |

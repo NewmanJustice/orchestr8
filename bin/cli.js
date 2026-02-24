@@ -7,6 +7,7 @@ const { displayQueue, resetQueue } = require('../src/orchestrator');
 const { validate, formatOutput } = require('../src/validate');
 const { displayHistory, showStats, clearHistory } = require('../src/history');
 const { displayInsights } = require('../src/insights');
+const { displayConfig, setConfigValue, resetConfig } = require('../src/retry');
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -86,6 +87,26 @@ const commands = {
     },
     description: 'Analyze pipeline history for bottlenecks, failures, and trends'
   },
+  'retry-config': {
+    fn: () => {
+      if (subArg === 'set') {
+        const key = args[2];
+        const value = args[3];
+        if (!key || !value) {
+          console.error('Usage: retry-config set <key> <value>');
+          console.error('Valid keys: maxRetries, windowSize, highFailureThreshold');
+          process.exit(1);
+        }
+        setConfigValue(key, value);
+      } else if (subArg === 'reset') {
+        resetConfig();
+        console.log('Retry configuration reset to defaults.');
+      } else {
+        displayConfig();
+      }
+    },
+    description: 'Manage retry configuration for adaptive retry logic'
+  },
   help: {
     fn: showHelp,
     description: 'Show this help message'
@@ -114,6 +135,9 @@ Commands:
   insights --bottlenecks Show only bottleneck analysis
   insights --failures   Show only failure patterns
   insights --json       Output analysis as JSON
+  retry-config          View current retry configuration
+  retry-config set <key> <value>  Modify a config value (maxRetries, windowSize, highFailureThreshold)
+  retry-config reset    Reset retry configuration to defaults
   validate              Run pre-flight checks to validate project configuration
   help                  Show this help message
 

@@ -3,6 +3,15 @@ const { update } = require('./update');
 const { addSkills, listSkills, AGENT_SKILLS } = require('./skills');
 const { validate, formatOutput, checkNodeVersion } = require('./validate');
 const { recordHistory, displayHistory, showStats, clearHistory } = require('./history');
+const {
+  readConfig,
+  writeConfig,
+  resetConfig,
+  calculateFailureRate,
+  recommendStrategy,
+  applyStrategy,
+  shouldRetry
+} = require('./retry');
 
 module.exports = {
   init,
@@ -16,5 +25,13 @@ module.exports = {
   recordHistory,
   displayHistory,
   showStats,
-  clearHistory
+  clearHistory,
+  // Retry module exports
+  readConfig,
+  writeConfig,
+  resetConfig,
+  calculateFailureRate,
+  recommendStrategy,
+  applyStrategy,
+  shouldRetry
 };

@@ -265,6 +265,55 @@ function runPipelineInWorktree(slug, worktreePath) {
 
 // --- Main Orchestration ---
 
+function dryRun(slugs, config, baseBranch, gitStatus, validation) {
+  const { active, queued } = splitByLimit(slugs, config.maxConcurrency);
+
+  console.log('\n=== DRY RUN MODE ===\n');
+  console.log('Pre-flight checks:');
+  console.log(`  ${gitStatus.isGitRepo ? '✓' : '✗'} Git repository: ${gitStatus.isGitRepo ? 'yes' : 'no'}`);
+  console.log(`  ${!gitStatus.isDirty ? '✓' : '✗'} Working tree: ${gitStatus.isDirty ? 'dirty (has uncommitted changes)' : 'clean'}`);
+  console.log(`  ✓ Git version: ${gitStatus.gitVersion}`);
+  console.log(`  ✓ Base branch: ${baseBranch}`);
+
+  if (!validation.valid) {
+    console.log(`\n⚠️  WARNING: Pre-flight checks failed. Real execution would abort.`);
+    validation.errors.forEach(e => console.log(`     - ${e}`));
+  }
+
+  console.log(`\nConfiguration:`);
+  console.log(`  Max concurrency: ${config.maxConcurrency}`);
+  console.log(`  Total features: ${slugs.length}`);
+
+  console.log(`\nInitial batch (${active.length} features):`);
+  active.forEach(slug => {
+    console.log(`  → ${slug}`);
+    console.log(`      Worktree: ${buildWorktreePath(slug)}`);
+    console.log(`      Branch:   ${buildBranchName(slug)}`);
+    console.log(`      Command:  npx claude /implement-feature "${slug}" --no-commit`);
+  });
+
+  if (queued.length > 0) {
+    console.log(`\nQueued (${queued.length} features, will start as slots free):`);
+    queued.forEach(slug => {
+      console.log(`  ⏳ ${slug}`);
+    });
+  }
+
+  console.log(`\nExecution plan:`);
+  console.log(`  1. Create ${active.length} git worktrees`);
+  console.log(`  2. Spawn ${active.length} parallel pipeline processes`);
+  console.log(`  3. As each completes: merge to ${baseBranch}, cleanup worktree`);
+  if (queued.length > 0) {
+    console.log(`  4. Promote queued features as slots free`);
+  }
+  console.log(`  5. Report final summary`);
+
+  console.log(`\nTo execute for real, run without --dry-run`);
+  console.log('===================\n');
+
+  return { success: true, dryRun: true };
+}
+
 async function runParallel(slugs, options = {}) {
   const config = { ...getDefaultConfig(), ...options };
   const baseBranch = getCurrentBranch();
@@ -272,6 +321,12 @@ async function runParallel(slugs, options = {}) {
   // Pre-flight validation
   const gitStatus = checkGitStatus();
   const validation = validatePreFlight(gitStatus);
+
+  // Dry run mode - show what would happen without executing
+  if (options.dryRun) {
+    return dryRun(slugs, config, baseBranch, gitStatus, validation);
+  }
+
   if (!validation.valid) {
     console.error('Pre-flight validation failed:');
     validation.errors.forEach(e => console.error(`  - ${e}`));
@@ -456,6 +511,7 @@ module.exports = {
   saveQueue,
   QUEUE_FILE,
   // Execution
+  dryRun,
   runPipelineInWorktree,
   runParallel,
   startFeature,

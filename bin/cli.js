@@ -161,13 +161,14 @@ const commands = {
       } else {
         const slugs = args.slice(1).filter(a => !a.startsWith('--'));
         if (slugs.length === 0) {
-          console.error('Usage: orchestr8 parallel <slug1> <slug2> ... [--max-concurrency=N]');
+          console.error('Usage: orchestr8 parallel <slug1> <slug2> ... [--max-concurrency=N] [--dry-run]');
           console.error('       orchestr8 parallel status');
           console.error('       orchestr8 parallel cleanup');
           process.exit(1);
         }
         const maxFlag = args.find(a => a.startsWith('--max-concurrency='));
-        const options = {};
+        const dryRunFlag = args.includes('--dry-run');
+        const options = { dryRun: dryRunFlag };
         if (maxFlag) {
           options.maxConcurrency = parseInt(maxFlag.split('=')[1], 10);
         }
@@ -212,6 +213,7 @@ Commands:
   feedback-config set <key> <value>  Modify a config value (minRatingThreshold, enabled)
   feedback-config reset Reset feedback configuration to defaults
   parallel <slugs...>   Run multiple feature pipelines in parallel
+  parallel <slugs...> --dry-run  Show execution plan without running
   parallel status       Show status of all parallel pipelines
   parallel cleanup      Remove completed/aborted worktrees
   help                  Show this help message

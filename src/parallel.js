@@ -4,10 +4,48 @@ const path = require('path');
 const { execSync, spawn } = require('child_process');
 const fs = require('fs');
 
-const QUEUE_FILE = '.claude/parallel-queue.json';
+const CONFIG_FILE = '.claude/parallel-config.json';
 
-function buildWorktreePath(slug) {
-  return `.claude/worktrees/feat-${slug}`;
+function getDefaultParallelConfig() {
+  return {
+    maxConcurrency: 3,
+    cli: 'npx claude',
+    skill: '/implement-feature',
+    skillFlags: '--no-commit',
+    worktreeDir: '.claude/worktrees',
+    queueFile: '.claude/parallel-queue.json'
+  };
+}
+
+function readParallelConfig() {
+  if (!fs.existsSync(CONFIG_FILE)) {
+    return getDefaultParallelConfig();
+  }
+  try {
+    const content = fs.readFileSync(CONFIG_FILE, 'utf8');
+    return { ...getDefaultParallelConfig(), ...JSON.parse(content) };
+  } catch {
+    return getDefaultParallelConfig();
+  }
+}
+
+function writeParallelConfig(config) {
+  const dir = path.dirname(CONFIG_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+
+function getQueueFile() {
+  return readParallelConfig().queueFile;
+}
+
+const QUEUE_FILE = '.claude/parallel-queue.json'; // Legacy reference
+
+function buildWorktreePath(slug, config = null) {
+  const cfg = config || readParallelConfig();
+  return `${cfg.worktreeDir}/feat-${slug}`;
 }
 
 function buildBranchName(slug) {
@@ -15,7 +53,8 @@ function buildBranchName(slug) {
 }
 
 function getDefaultConfig() {
-  return { maxConcurrency: 3 };
+  const cfg = readParallelConfig();
+  return { maxConcurrency: cfg.maxConcurrency };
 }
 
 function getQueuePath(worktreePath) {
@@ -82,8 +121,10 @@ function promoteFromQueue(state) {
   };
 }
 
-function buildPipelineCommand(slug, worktreePath) {
-  return `claude --cwd ${worktreePath} /implement-feature "${slug}"`;
+function buildPipelineCommand(slug, worktreePath, config = null) {
+  const cfg = config || readParallelConfig();
+  const flags = cfg.skillFlags ? ` ${cfg.skillFlags}` : '';
+  return `${cfg.cli} --cwd ${worktreePath} ${cfg.skill} "${slug}"${flags}`;
 }
 
 function canFastForward({ mainHead, branchBase }) {
@@ -232,22 +273,30 @@ function getCurrentBranch() {
 // --- Queue Persistence ---
 
 function loadQueue() {
-  if (!fs.existsSync(QUEUE_FILE)) {
+  const queueFile = getQueueFile();
+  if (!fs.existsSync(queueFile)) {
     return { features: [], startedAt: null };
   }
-  return JSON.parse(fs.readFileSync(QUEUE_FILE, 'utf8'));
+  return JSON.parse(fs.readFileSync(queueFile, 'utf8'));
 }
 
 function saveQueue(queue) {
-  fs.mkdirSync(path.dirname(QUEUE_FILE), { recursive: true });
-  fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue, null, 2));
+  const queueFile = getQueueFile();
+  fs.mkdirSync(path.dirname(queueFile), { recursive: true });
+  fs.writeFileSync(queueFile, JSON.stringify(queue, null, 2));
 }
 
 // --- Pipeline Execution ---
 
-function runPipelineInWorktree(slug, worktreePath) {
+function runPipelineInWorktree(slug, worktreePath, config = null) {
+  const cfg = config || readParallelConfig();
+  const cliParts = cfg.cli.split(' ');
+  const skillParts = cfg.skill.split(' ');
+  const flagParts = cfg.skillFlags ? cfg.skillFlags.split(' ') : [];
+  const allArgs = [...cliParts.slice(1), ...skillParts, slug, ...flagParts];
+
   return new Promise((resolve) => {
-    const proc = spawn('npx', ['claude', '/implement-feature', slug, '--no-commit'], {
+    const proc = spawn(cliParts[0], allArgs, {
       cwd: worktreePath,
       stdio: 'inherit',
       shell: true
@@ -266,6 +315,7 @@ function runPipelineInWorktree(slug, worktreePath) {
 // --- Main Orchestration ---
 
 function dryRun(slugs, config, baseBranch, gitStatus, validation) {
+  const parallelCfg = readParallelConfig();
   const { active, queued } = splitByLimit(slugs, config.maxConcurrency);
 
   console.log('\n=== DRY RUN MODE ===\n');
@@ -282,14 +332,18 @@ function dryRun(slugs, config, baseBranch, gitStatus, validation) {
 
   console.log(`\nConfiguration:`);
   console.log(`  Max concurrency: ${config.maxConcurrency}`);
+  console.log(`  CLI: ${parallelCfg.cli}`);
+  console.log(`  Skill: ${parallelCfg.skill}`);
+  console.log(`  Flags: ${parallelCfg.skillFlags || '(none)'}`);
+  console.log(`  Worktree dir: ${parallelCfg.worktreeDir}`);
   console.log(`  Total features: ${slugs.length}`);
 
   console.log(`\nInitial batch (${active.length} features):`);
   active.forEach(slug => {
     console.log(`  → ${slug}`);
-    console.log(`      Worktree: ${buildWorktreePath(slug)}`);
+    console.log(`      Worktree: ${buildWorktreePath(slug, parallelCfg)}`);
     console.log(`      Branch:   ${buildBranchName(slug)}`);
-    console.log(`      Command:  npx claude /implement-feature "${slug}" --no-commit`);
+    console.log(`      Command:  ${buildPipelineCommand(slug, buildWorktreePath(slug, parallelCfg), parallelCfg)}`);
   });
 
   if (queued.length > 0) {
@@ -478,6 +532,12 @@ async function cleanupWorktrees() {
 }
 
 module.exports = {
+  // Configuration
+  CONFIG_FILE,
+  getDefaultParallelConfig,
+  readParallelConfig,
+  writeParallelConfig,
+  getQueueFile,
   // Utility functions
   buildWorktreePath,
   buildBranchName,

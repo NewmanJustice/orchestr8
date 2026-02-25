@@ -19,7 +19,10 @@ const {
   splitByLimit,
   runParallel,
   loadQueue,
-  cleanupWorktrees
+  cleanupWorktrees,
+  readParallelConfig,
+  writeParallelConfig,
+  getDefaultParallelConfig
 } = require('../src/parallel');
 
 const args = process.argv.slice(2);
@@ -137,6 +140,41 @@ const commands = {
     },
     description: 'Manage feedback loop configuration'
   },
+  'parallel-config': {
+    fn: () => {
+      if (subArg === 'set') {
+        const key = args[2];
+        const value = args[3];
+        if (!key || !value) {
+          console.error('Usage: parallel-config set <key> <value>');
+          console.error('Valid keys: cli, skill, skillFlags, worktreeDir, maxConcurrency, queueFile');
+          process.exit(1);
+        }
+        const config = readParallelConfig();
+        if (key === 'maxConcurrency') {
+          config[key] = parseInt(value, 10);
+        } else {
+          config[key] = value;
+        }
+        writeParallelConfig(config);
+        console.log(`Set ${key} = ${value}`);
+      } else if (subArg === 'reset') {
+        writeParallelConfig(getDefaultParallelConfig());
+        console.log('Parallel configuration reset to defaults.');
+      } else {
+        const config = readParallelConfig();
+        console.log('Parallel Configuration\n');
+        console.log(`  cli:            ${config.cli}`);
+        console.log(`  skill:          ${config.skill}`);
+        console.log(`  skillFlags:     ${config.skillFlags}`);
+        console.log(`  worktreeDir:    ${config.worktreeDir}`);
+        console.log(`  maxConcurrency: ${config.maxConcurrency}`);
+        console.log(`  queueFile:      ${config.queueFile}`);
+        console.log('\nTo change: orchestr8 parallel-config set <key> <value>');
+      }
+    },
+    description: 'View or modify parallel pipeline configuration'
+  },
   parallel: {
     fn: async () => {
       if (subArg === 'status') {
@@ -216,6 +254,9 @@ Commands:
   parallel <slugs...> --dry-run  Show execution plan without running
   parallel status       Show status of all parallel pipelines
   parallel cleanup      Remove completed/aborted worktrees
+  parallel-config       View parallel pipeline configuration
+  parallel-config set <key> <value>  Modify config (cli, skill, skillFlags, etc.)
+  parallel-config reset Reset parallel configuration to defaults
   help                  Show this help message
 
 Examples:

@@ -56,17 +56,17 @@ Suggested features to implement using the `/implement-feature` pipeline.
 | Status | Feature | Effort | Description |
 |--------|---------|--------|-------------|
 | ✅ | parallel-features | L | Run multiple pipelines in parallel (DONE) |
+| ✅ | parallel-progress | M | Real-time progress per pipeline |
 | ⏳ | agent-timeouts | M | Configurable timeouts per stage |
 | ⏳ | rollback | M | Revert a feature's commits |
 | ⏳ | agent-overrides | M | Per-project agent customization |
 | ⏳ | resume-from-stage | M | Resume from specific stage |
-| ⏳ | parallel-progress | M | Real-time progress per pipeline |
 
 ## Low Priority (P3)
 
 | Status | Feature | Effort | Description |
 |--------|---------|--------|-------------|
-| 💡 | parallel-rollback | M | Undo failed parallel run |
+| ✅ | parallel-rollback | M | Undo failed parallel run |
 | 💡 | dry-run-mode | M | Validate without running agents |
 | 💡 | feature-dependencies | M | Define execution order |
 | 💡 | webhook-notifications | L | Slack/email on completion |

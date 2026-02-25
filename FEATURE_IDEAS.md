@@ -2,43 +2,139 @@
 
 Suggested features to implement using the `/implement-feature` pipeline.
 
-## Suggested Backlog Order
+## Backlog
 
-Priority based on effort-to-value ratio:
+### Priority Definitions
 
-| Priority | Feature | Effort | Value | Rationale |
-|----------|---------|--------|-------|-----------|
-| 1 | cost-tracking | Low | High | Visibility into API costs; users need this for budgeting |
-| 2 | export-history | Low | High | Completes observability story; enables team reporting |
-| 3 | diff-preview | Low | Medium | Prevents surprise commits; quick safety win |
-| 4 | agent-timeouts | Medium | High | Important safety feature; prevents runaway costs |
-| 5 | rollback | Low | Medium | Easy undo for mistakes; builds on git |
-| 6 | agent-overrides | Medium | High | Per-project customization without forking |
-| 7 | resume-from-stage | Medium | Medium | Enables manual artifact editing workflows |
-| 8 | parallel-features | Medium | High | Major productivity boost for large projects |
-| 9 | dry-run-mode | Medium | Medium | Useful but hard to implement accurately |
-| 10 | feature-dependencies | Medium | Medium | Useful for complex projects with ordered work |
-| 11 | webhook-notifications | High | Medium | Start with shell hooks instead; defer full webhooks |
-| 12 | mcp-integration | High | High | Ecosystem play; defer until core is stable |
+| Priority | Meaning |
+|----------|---------|
+| **P0** | Critical — do before release |
+| **P1** | High — do soon |
+| **P2** | Medium — nice to have |
+| **P3** | Low — future consideration |
 
-## All Features
+### Effort Definitions
 
-| Feature | Description | Complexity |
-|---------|-------------|------------|
-| **cost-tracking** | Track token usage per stage; show estimated cost in insights | Low |
-| **export-history** | Export pipeline history to CSV/JSON for external reporting and analysis | Low |
-| **diff-preview** | Show git diff before auto-commit with confirm/abort option | Low |
-| **rollback** | Revert a feature's commits with `orchestr8 rollback <slug>` | Low |
-| **agent-timeouts** | Add configurable timeouts per stage to prevent runaway agents | Medium |
-| **agent-overrides** | Per-project agent customization via override files | Medium |
-| **resume-from-stage** | Allow resuming from a specific stage (e.g., `--resume-from=nigel`) | Medium |
-| **parallel-features** | Run multiple feature pipelines in parallel using git worktrees | Medium |
-| **dry-run-mode** | Validate inputs and estimate work without running agents | Medium |
-| **feature-dependencies** | Define dependencies between features for ordered execution | Medium |
-| **webhook-notifications** | Send notifications (Slack, email) on pipeline completion/failure | High |
-| **mcp-integration** | Expose pipeline as MCP tools for integration with other AI systems | High |
+| Effort | Meaning |
+|--------|---------|
+| **S** | Small — <1 hour, <50 lines |
+| **M** | Medium — 1-3 hours, 50-200 lines |
+| **L** | Large — 3-8 hours, 200-500 lines |
+| **XL** | Extra Large — 1+ days, 500+ lines |
+
+### Status Key
+
+- ✅ Done
+- 🚧 In Progress
+- ⏳ Planned
+- 💡 Idea
+
+---
+
+## Parallel Safeguards (P0 — Before Release)
+
+| Status | Feature | Effort | Description |
+|--------|---------|--------|-------------|
+| ⏳ | parallel-confirm | S | Confirmation prompt before execution |
+| ⏳ | parallel-lock | S | Lock file to prevent concurrent runs |
+| ⏳ | parallel-logging | M | Output to log files per pipeline |
+| ⏳ | parallel-abort | M | Abort command to stop all and cleanup |
+
+## High Priority (P1)
+
+| Status | Feature | Effort | Description |
+|--------|---------|--------|-------------|
+| ⏳ | parallel-timeout | M | Timeout per pipeline to prevent runaway |
+| ⏳ | parallel-disk-check | S | Warn if disk space is low |
+| ⏳ | parallel-max-limit | S | Cap total features to prevent resource exhaustion |
+| ⏳ | cost-tracking | M | Track token usage and estimated costs |
+| ⏳ | export-history | S | Export history to CSV/JSON |
+| ⏳ | diff-preview | S | Show diff before auto-commit |
+
+## Medium Priority (P2)
+
+| Status | Feature | Effort | Description |
+|--------|---------|--------|-------------|
+| ✅ | parallel-features | L | Run multiple pipelines in parallel (DONE) |
+| ⏳ | agent-timeouts | M | Configurable timeouts per stage |
+| ⏳ | rollback | M | Revert a feature's commits |
+| ⏳ | agent-overrides | M | Per-project agent customization |
+| ⏳ | resume-from-stage | M | Resume from specific stage |
+| ⏳ | parallel-progress | M | Real-time progress per pipeline |
+
+## Low Priority (P3)
+
+| Status | Feature | Effort | Description |
+|--------|---------|--------|-------------|
+| 💡 | parallel-rollback | M | Undo failed parallel run |
+| 💡 | dry-run-mode | M | Validate without running agents |
+| 💡 | feature-dependencies | M | Define execution order |
+| 💡 | webhook-notifications | L | Slack/email on completion |
+| 💡 | mcp-integration | XL | Expose as MCP tools |
+
+---
 
 ## Details
+
+### Parallel Safeguards
+
+#### parallel-confirm
+Confirmation prompt before starting parallel execution:
+```
+This will:
+  • Create 3 git worktrees
+  • Run 3 parallel pipelines
+  • Estimated disk usage: ~150MB
+
+Continue? [y/N]
+```
+- Skip with `--yes` or `-y` flag
+- Prevents accidental execution
+
+#### parallel-lock
+Lock file to prevent running parallel twice simultaneously:
+- Create `.claude/parallel.lock` with PID on start
+- Check if lock exists and process is running before starting
+- Clean up lock on completion or abort
+- `--force` flag to override (with warning)
+
+#### parallel-logging
+Write each pipeline's output to a log file:
+- Location: `.claude/worktrees/feat-{slug}/pipeline.log`
+- Keeps console clean - only show summary status
+- `--verbose` flag to also stream to console
+- Timestamps on each line for debugging
+
+#### parallel-abort
+Command to stop all running pipelines and clean up:
+```bash
+orchestr8 parallel abort           # Stop all, preserve worktrees
+orchestr8 parallel abort --cleanup # Stop all, remove worktrees
+```
+- Send SIGTERM to child processes
+- Update queue state to 'aborted'
+- Option to preserve worktrees for debugging
+
+#### parallel-timeout
+Timeout per pipeline to prevent runaway processes:
+- Default: 30 minutes per pipeline
+- Configure: `parallel-config set timeout 60` (minutes)
+- Override: `--timeout=45` flag
+- On timeout: kill process, mark as failed, preserve worktree
+
+#### parallel-disk-check
+Check available disk space before starting:
+- Estimate space needed: ~50MB per worktree
+- Warn if less than 500MB available
+- `--skip-disk-check` to override
+- Show current disk usage in dry-run output
+
+#### parallel-max-limit
+Cap total features that can be queued:
+- Default: 10 features max
+- Configure: `parallel-config set maxFeatures 20`
+- Prevents accidentally overwhelming the system
+- Error message with current limit if exceeded
 
 ### export-history
 Complements the existing history/insights modules. Would allow users to:
@@ -108,13 +204,8 @@ Per-project agent customization:
 - Allows project-specific instructions without forking
 - Example: Add domain-specific testing requirements for Nigel
 
-### parallel-features
-Run multiple features simultaneously:
-- `orchestr8 parallel feat-a feat-b feat-c`
-- Uses git worktrees for isolation
-- Each feature runs in its own worktree/branch
-- Merges results back to main branch
-- Significantly speeds up large backlogs
+### parallel-features ✅ DONE
+Implemented in v2.7. See README for documentation.
 
 ### feature-dependencies
 Define execution order for related features:

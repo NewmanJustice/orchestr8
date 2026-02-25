@@ -41,6 +41,7 @@ const {
   buildQueueState,
   generateBusinessContextDirective
 } = require('./business-context');
+const tools = require('./tools');
 
 module.exports = {
   init,
@@ -86,5 +87,7 @@ module.exports = {
   parseIncludeBusinessContextFlag,
   shouldIncludeBusinessContext,
   buildQueueState,
-  generateBusinessContextDirective
+  generateBusinessContextDirective,
+  // Tools module (model native features)
+  tools
 };

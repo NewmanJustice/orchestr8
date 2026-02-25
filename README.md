@@ -341,6 +341,10 @@ orchestr8 parallel user-auth dashboard notifications
     │  • Git repository check               │
     │  • Clean working tree required        │
     │  • Git 2.5+ for worktree support      │
+    │  • Feature specs exist & complete     │
+    │  • File overlap detection             │
+    │  • Dependency detection               │
+    │  • Scope estimation                   │
     └───────────────────────────────────────┘
                     │
                     ▼
@@ -390,8 +394,59 @@ npx orchestr8 parallel feat-a feat-b feat-c feat-d --max-concurrency=2
 # Check status of running pipelines
 npx orchestr8 parallel status
 
+# Skip pre-flight feature validation
+npx orchestr8 parallel user-auth dashboard --skip-preflight
+
 # Clean up completed/aborted worktrees
 npx orchestr8 parallel cleanup
+```
+
+### Pre-flight Batch Validation (v2.8)
+
+Before parallel execution, the system validates the batch to prevent wasted resources:
+
+```
+$ npx orchestr8 parallel feat-a feat-b feat-c --dry-run
+
+Pre-flight Validation
+=====================
+
+✓ feat-a: Spec complete, 3 stories, Plan exists
+✓ feat-b: Spec complete, 2 stories
+✗ feat-c: Not ready
+    ✗ Missing FEATURE_SPEC.md
+
+Conflict Analysis
+=================
+
+⚠ File overlap detected:
+  • src/utils.js: feat-a, feat-b both modify
+
+Scope Estimation
+================
+
+  Feature   | Stories | Files | Est. Time
+  ----------|---------|-------|----------
+  feat-a    |       3 |     4 | ~27 min
+  feat-b    |       2 |     2 | ~24 min
+  feat-c    |       0 |     0 | ~10 min
+
+Total estimated: ~61 min (parallel: ~27 min)
+```
+
+**Validation checks:**
+- Feature specs exist and have required sections
+- User stories present (warns if missing)
+- Implementation plans scanned for file overlap
+- Dependencies between features detected
+- Scope estimated from story/file counts
+
+**On validation failure:**
+```
+Cannot proceed. Fix issues above or use --skip-preflight to override.
+
+Suggested commands:
+  /implement-feature "feat-c" --pause-after=alex
 ```
 
 ### Configuration
@@ -420,6 +475,9 @@ npx orchestr8 parallel-config
 | `skillFlags` | `--no-commit` | Additional flags for the skill |
 | `worktreeDir` | `.claude/worktrees` | Where to create worktrees |
 | `maxConcurrency` | `3` | Maximum parallel pipelines |
+| `maxFeatures` | `10` | Maximum features per batch |
+| `timeout` | `30` | Timeout per pipeline (minutes) |
+| `minDiskSpaceMB` | `500` | Minimum disk space warning threshold |
 | `queueFile` | `.claude/parallel-queue.json` | State persistence file |
 
 #### Examples for Different CLIs

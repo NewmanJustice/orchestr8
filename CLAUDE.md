@@ -35,6 +35,16 @@ node bin/cli.js insights --feedback # Feedback correlation
 # Configuration
 node bin/cli.js retry-config        # View retry settings
 node bin/cli.js feedback-config     # View feedback thresholds
+node bin/cli.js parallel-config     # View parallel settings
+
+# Parallel execution
+node bin/cli.js parallel feat-a feat-b     # Run multiple features in parallel
+node bin/cli.js parallel feat-a --dry-run  # Preview execution plan
+node bin/cli.js parallel status            # Show pipeline status
+node bin/cli.js parallel status --detailed # Show progress bars
+node bin/cli.js parallel abort             # Stop running pipelines
+node bin/cli.js parallel rollback          # Undo completed merges
+node bin/cli.js parallel cleanup           # Remove completed worktrees
 ```
 
 ## Architecture
@@ -53,11 +63,17 @@ orchestr8 is a multi-agent workflow framework that coordinates four AI agents (A
 - `src/insights.js` - Analyzes patterns, detects bottlenecks, recommends improvements
 - `src/retry.js` - Smart retry strategies based on failure history
 - `src/feedback.js` - Agent-to-agent quality assessment with thresholds
+- `src/classifier.js` - Smart routing: classifies features as technical or user-facing
+- `src/handoff.js` - Structured summaries between agents for token efficiency
+- `src/business-context.js` - Lazy loading of business context based on feature needs
+- `src/parallel.js` - Parallel pipeline execution using git worktrees
+- `src/tools/` - Tool schemas, validation, and prompts for Claude native features
 
 ### Bundled Assets
 
-- `.blueprint/agents/` - Agent specifications (AGENT_*.md) defining each agent's role and behavior
-- `.blueprint/templates/` - SYSTEM_SPEC.md and FEATURE_SPEC.md templates
+- `.blueprint/agents/` - Agent specifications (AGENT_*.md) and shared GUARDRAILS.md
+- `.blueprint/prompts/` - Slim runtime prompts (~30-50 lines) for token efficiency
+- `.blueprint/templates/` - SYSTEM_SPEC.md, FEATURE_SPEC.md, STORY_TEMPLATE.md, TEST_TEMPLATE.md
 - `.blueprint/ways_of_working/` - Development rituals
 - `.business_context/` - Placeholder for business context documents
 - `SKILL.md` - The `/implement-feature` skill definition (copied to `.claude/commands/` on init)
@@ -67,8 +83,10 @@ orchestr8 is a multi-agent workflow framework that coordinates four AI agents (A
 The `/implement-feature` skill spawns agents sequentially via Task tool sub-agents:
 
 ```
-Alex (feature spec) → Cass (user stories) → Nigel (tests) → Codey (plan → implement) → Auto-commit
+Alex (feature spec) → [Cass (user stories)] → Nigel (tests) → Codey (plan → implement) → Auto-commit
 ```
+
+**Smart Story Routing (v2.7):** Cass stage is automatically skipped for technical features (refactoring, optimization, infrastructure) to save ~25-40k tokens. User-facing features go through Cass.
 
 Invocation options:
 - `/implement-feature "slug"` - Run full pipeline
@@ -77,14 +95,27 @@ Invocation options:
 - `/implement-feature "slug" --no-feedback` - Skip feedback collection
 - `/implement-feature "slug" --no-validate` - Skip pre-flight validation
 - `/implement-feature "slug" --no-history` - Skip history recording
+- `/implement-feature "slug" --with-stories` - Force include Cass stage
+- `/implement-feature "slug" --skip-stories` - Force skip Cass stage
 
 Queue state is persisted to `.claude/implement-queue.json` for recovery on failure. The skill reads the queue on invocation and resumes from `current.stage`.
+
+### Parallel Execution
+
+Run multiple features simultaneously using git worktrees for isolation:
+
+```bash
+npx orchestr8 parallel user-auth dashboard notifications --dry-run  # Preview plan
+npx orchestr8 parallel user-auth dashboard notifications            # Execute
+```
+
+Each feature gets an isolated worktree in `.claude/worktrees/feat-{slug}/`. Successful features auto-merge; conflicts are preserved for manual resolution. Requires Git 2.5+ and clean working tree.
 
 ## Key Patterns
 
 - User content directories (`features/`, `system_specification/`) are preserved during `update`
 - Framework directories (`agents/`, `templates/`, `ways_of_working/`) are replaced during `update`
-- State files are gitignored: `implement-queue.json`, `pipeline-history.json`, `retry-config.json`, `feedback-config.json`
+- State files are gitignored: `implement-queue.json`, `pipeline-history.json`, `retry-config.json`, `feedback-config.json`, `parallel-config.json`, `parallel-queue.json`
 
 ## Token Limit Handling
 

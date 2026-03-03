@@ -1,8 +1,16 @@
 # murmur8
 
-A multi-agent workflow framework for automated feature development In Claude Code and Copilot CLI. Four specialised AI agents collaborate in sequence to take features from specification to implementation, with built-in feedback loops and self-improvement capabilities.
+A multi-agent workflow framework for automated feature development. Four specialised AI agents collaborate in sequence to take features from specification to implementation, with built-in feedback loops and self-improvement capabilities. 
 
 Like a murmuration of starlings, individual agents move together as one, each responding to its neighbours to create something greater than the sum of its parts.
+
+# TLDR - Using murmur8
+
+## Using murmur8 inside Claude Code or Copilot CLI
+Initialize with `npx murmur8 init`, then run `/implement-feature your-feature` in Claude Code or Copilot CLI. Four AI agents collaborate to turn your idea into tested, working code — from spec to implementation. Add up to 3 feature slugs and the murmuration magic will build them in paralell in an isolated git worktree. 
+
+## Using murmur8 outside of Claude Code or Copilot CLI
+Initialize with `npx murmur8 init`, then run `npx murmur8 murm feature-a feature-b` from your terminal. Each feature gets an isolated git worktree and runs its own pipeline. Successful features auto-merge to main. Use `--dry-run` to preview the plan first.
 
 ## Upgrading to v4.0
 
@@ -136,20 +144,21 @@ This updates `.blueprint/agents/`, `.blueprint/templates/`, `.blueprint/ways_of_
 | `npx murmur8 murm-config` | View murmuration pipeline configuration |
 | `npx murmur8 murm-config set <key> <value>` | Modify murmuration settings |
 
-## Usage
+## Skill usage
 
 Run the pipeline with the `/implement-feature` skill in Claude Code:
 
 ```bash
 /implement-feature                           # Interactive
-/implement-feature "user-auth"               # New feature
-/implement-feature "user-auth" --no-feedback # Skip feedback collection
-/implement-feature "user-auth" --no-validate # Skip pre-flight validation
-/implement-feature "user-auth" --no-history  # Skip history recording
-/implement-feature "user-auth" --no-commit   # Skip auto-commit
-/implement-feature "user-auth" --pause-after=alex|cass|nigel|codey-plan
-/implement-feature "user-auth" --with-stories  # Force include Cass stage
-/implement-feature "user-auth" --skip-stories  # Force skip Cass stage
+/implement-feature "Your Slug"               # New feature
+/implement-feature "Your Slug" --no-feedback # Skip feedback collection
+/implement-feature "Your Slug" --no-validate # Skip pre-flight validation
+/implement-feature "Your Slug" --no-history  # Skip history recording
+/implement-feature "Your Slug" --no-commit   # Skip auto-commit
+/implement-feature "Your Slug" --pause-after=alex|cass|nigel|codey-plan
+/implement-feature "Your Slug" --with-stories  # Force include Cass stage
+/implement-feature "Your Slug" --skip-stories  # Force skip Cass stage
+/implement-feature "Your Slug A" "Your Slug B" "Your Slug C" # Runs murmuration with sub agents within a single instance of the CLI.
 ```
 
 ## Smart Story Routing (v2.7)

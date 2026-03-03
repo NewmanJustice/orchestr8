@@ -408,7 +408,6 @@ Alex → Cass → Nigel → Codey → Docey → Auto-commit
 
 | Priority | Item | Effort | Description |
 |----------|------|--------|-------------|
-| P3 | extract-prompt-util | S | `prompt()` function in init.js duplicated — extract to `src/utils.js` |
 | P3 | skill-modularize | L | SKILL.md is 850+ lines — consider splitting into composable sections |
 
 ### Notes

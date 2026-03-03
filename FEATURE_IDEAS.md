@@ -378,6 +378,7 @@ Alex → Cass → Nigel → Codey → Docey → Auto-commit
 ```
 
 **Docey's responsibilities:**
+*** Or should this be Cass as a new agent will use more tokens on each run? ***
 - Read the feature spec and implementation plan
 - Identify user-facing changes (new commands, flags, config options)
 - Update README.md command tables

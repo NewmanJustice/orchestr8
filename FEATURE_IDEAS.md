@@ -79,6 +79,7 @@ Suggested features to implement using the `/implement-feature` pipeline.
 | 💡 | aider-adapter | M | Symlink/config for Aider CLI compatibility |
 | 💡 | cursor-adapter | M | Skill format for Cursor Composer |
 | 💡 | docey-agent | L | Fifth agent to update docs after implementation |
+| 💡 | backlog-tooling | M | CLI commands for backlog management (`npx murmur8 backlog`) |
 
 ---
 
@@ -407,9 +408,6 @@ Alex → Cass → Nigel → Codey → Docey → Auto-commit
 
 | Priority | Item | Effort | Description |
 |----------|------|--------|-------------|
-| P2 | split-cli-commands | M | `bin/cli.js` is 400+ lines — extract command handlers to `src/commands/*.js` |
-| P2 | config-factory | M | DRY up retry/feedback/murm/stack-config — shared pattern with validation |
-| P3 | theme-adoption | S | Use `src/theme.js` consistently across all output (not just murm) |
 | P3 | fix-status-icons | S | `STATUS_ICONS` in theme.js still uses `parallel_*` — rename to `murm_*` |
 | P3 | extract-prompt-util | S | `prompt()` function in init.js duplicated — extract to `src/utils.js` |
 | P3 | skill-modularize | L | SKILL.md is 850+ lines — consider splitting into composable sections |
@@ -428,6 +426,13 @@ src/commands/murm.js → Handler + help text
 - Could be: `createConfigModule({ name, defaults, validators })`
 
 **theme-adoption**: The pipeline skill output could use `formatStageStart()` and `colorize()` for consistent branding across CLI and skill execution.
+
+**backlog-tooling**: CLI commands for managing `.blueprint/features/BACKLOG.md`:
+- `npx murmur8 backlog` — list ready items
+- `npx murmur8 backlog add "slug" "description"` — add entry
+- `npx murmur8 backlog next` — show highest priority ready item
+- `npx murmur8 backlog murm P1` — run all P1 items via murmuration
+- Auto-integration with `/implement-feature` to pick from backlog
 
 ---
 

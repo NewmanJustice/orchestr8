@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const readline = require('readline');
+
+const { prompt } = require('./utils');
 
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const TARGET_DIR = process.cwd();
@@ -17,20 +18,6 @@ const UPDATABLE = [
   'templates',
   'ways_of_working'
 ];
-
-async function prompt(question) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.toLowerCase().trim());
-    });
-  });
-}
 
 function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true });

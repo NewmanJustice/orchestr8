@@ -98,6 +98,13 @@ This updates `.blueprint/agents/`, `.blueprint/templates/`, `.blueprint/ways_of_
 | `npx murmur8 history --stats` | View aggregate statistics |
 | `npx murmur8 history --all` | View all runs |
 | `npx murmur8 history clear` | Clear history |
+| `npx murmur8 history export` | Export history as CSV (default) |
+| `npx murmur8 history export --format=json` | Export as JSON |
+| `npx murmur8 history export --since=YYYY-MM-DD` | Filter by start date |
+| `npx murmur8 history export --until=YYYY-MM-DD` | Filter by end date |
+| `npx murmur8 history export --status=<status>` | Filter by status (success/failed/paused) |
+| `npx murmur8 history export --feature=<slug>` | Filter by feature slug |
+| `npx murmur8 history export --output=<path>` | Write to file instead of stdout |
 | `npx murmur8 insights` | Analyze patterns and get recommendations |
 | `npx murmur8 insights --feedback` | View feedback correlation analysis |
 | `npx murmur8 insights --bottlenecks` | View bottleneck analysis |

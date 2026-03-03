@@ -29,6 +29,10 @@ node bin/cli.js history             # View recent runs
 node bin/cli.js history --stats     # Aggregate statistics
 node bin/cli.js history --all       # All runs
 node bin/cli.js history clear       # Clear history
+node bin/cli.js history export      # Export as CSV
+node bin/cli.js history export --format=json  # Export as JSON
+node bin/cli.js history export --since=2024-01-01 --status=failed  # With filters
+node bin/cli.js history export --output=report.csv  # Write to file
 node bin/cli.js insights            # Analyze patterns
 node bin/cli.js insights --feedback # Feedback correlation
 

@@ -49,7 +49,7 @@ Suggested features to implement using the `/implement-feature` pipeline.
 | ✅ | parallel-disk-check | S | Warn if disk space is low |
 | ✅ | parallel-max-limit | S | Cap total features to prevent resource exhaustion |
 | ⏳ | cost-tracking | M | Track token usage and estimated costs |
-| ⏳ | export-history | S | Export history to CSV/JSON |
+| ✅ | export-history | S | Export history to CSV/JSON |
 | ⏳ | diff-preview | S | Show diff before auto-commit |
 
 ## Medium Priority (P2)
@@ -78,6 +78,7 @@ Suggested features to implement using the `/implement-feature` pipeline.
 | 💡 | skill-lint | S | Validate skill YAML frontmatter and required sections |
 | 💡 | aider-adapter | M | Symlink/config for Aider CLI compatibility |
 | 💡 | cursor-adapter | M | Skill format for Cursor Composer |
+| 💡 | docey-agent | L | Fifth agent to update docs after implementation |
 
 ---
 
@@ -365,6 +366,39 @@ Support for Cursor's Composer feature:
 - May need different approach (Cursor uses `.cursorrules`)
 - Could generate project rules that reference the pipeline
 - Goal: consistent experience across all major AI coding tools
+
+### docey-agent
+Fifth agent to update documentation after Codey implements:
+
+**Problem:** Pipeline doesn't update README/CLAUDE.md when new features are added. Documentation gets stale.
+
+**Solution:** Add "Docey" agent after Codey's implementation step:
+```
+Alex → Cass → Nigel → Codey → Docey → Auto-commit
+```
+
+**Docey's responsibilities:**
+- Read the feature spec and implementation plan
+- Identify user-facing changes (new commands, flags, config options)
+- Update README.md command tables
+- Update CLAUDE.md commands section
+- Add changelog entry if significant
+- Skip if feature is internal/non-user-facing
+
+**Input files:**
+- Feature spec: `{FEAT_DIR}/FEATURE_SPEC.md`
+- Implementation plan: `{FEAT_DIR}/IMPLEMENTATION_PLAN.md`
+- Files changed by Codey (from git diff)
+
+**Output files:**
+- `README.md` (if user-facing commands added)
+- `CLAUDE.md` (if commands added)
+- `{FEAT_DIR}/CHANGELOG_ENTRY.md` (optional, for release notes)
+
+**Skip conditions:**
+- Technical features (refactoring, optimization)
+- Internal modules with no CLI surface
+- `--skip-docs` flag
 
 ---
 

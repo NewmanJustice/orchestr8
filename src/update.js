@@ -42,6 +42,13 @@ async function update() {
   const skillSrc = path.join(PACKAGE_ROOT, 'SKILL.md');
   const skillDest = path.join(TARGET_DIR, 'SKILL.md');
 
+  // Check if running in the package source directory (dev mode)
+  if (PACKAGE_ROOT === TARGET_DIR) {
+    console.log('Cannot run update in the murmur8 source directory.');
+    console.log('This command is for updating projects that use murmur8.');
+    process.exit(1);
+  }
+
   // Check if .blueprint exists
   if (!fs.existsSync(blueprintDest)) {
     console.log('.blueprint directory not found. Run "agent-workflow init" first.');

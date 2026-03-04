@@ -74,9 +74,11 @@ murmur8 is a multi-agent workflow framework that coordinates four AI agents to a
 
 ### Source Structure
 
-- `bin/cli.js` - CLI entry point, routes commands to `src/` modules
+- `bin/cli.js` - CLI entry point, routes commands to `src/commands/` handlers
+- `src/commands/` - CLI command handlers (init, update, history, murm, queue, validate, etc.)
 - `src/index.js` - Main exports for programmatic use
-- `src/init.js` - Copies `.blueprint/`, `.business_context/`, and SKILL.md to target project
+- `src/config-factory.js` - Factory pattern for JSON config file management (read/write/defaults)
+- `src/init.js` - Core init logic: copies `.blueprint/`, `.business_context/`, and SKILL.md to target project
 - `src/update.js` - Updates framework files while preserving user content in `features/` and `system_specification/`
 - `src/orchestrator.js` - Queue management for the pipeline (`.claude/implement-queue.json`)
 - `src/validate.js` - Pre-flight checks (directories, specs, Node.js version)
@@ -92,6 +94,7 @@ murmur8 is a multi-agent workflow framework that coordinates four AI agents to a
 - `src/interactive.js` - Interactive mode for spec creation (system spec or feature spec)
 - `src/stack.js` - Configurable tech stack detection and configuration (auto-detects from package.json, pyproject.toml, go.mod, etc.)
 - `src/tools/` - Tool schemas, validation, and prompts for Claude native features
+- `src/utils.js` - Shared utility functions (prompt for user input, etc.)
 
 ### Bundled Assets
 

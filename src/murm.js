@@ -5,6 +5,7 @@ const { execSync, spawn } = require('child_process');
 const fs = require('fs');
 const readline = require('readline');
 const theme = require('./theme');
+const { recordHistory, readHistoryFile, writeHistoryFile } = require('./history');
 
 const CONFIG_FILE = '.claude/murm-config.json';
 const LOCK_FILE = '.claude/murm.lock';
@@ -18,6 +19,27 @@ const LEGACY_QUEUE_FILE = '.claude/parallel-queue.json';
 // Track running processes for abort handling
 let runningProcesses = new Map();
 let isAborting = false;
+
+const HISTORY_FILE = '.claude/pipeline-history.json';
+
+function mergeWorktreeHistory(worktreePath) {
+  const worktreeHistoryPath = path.join(worktreePath, HISTORY_FILE);
+  if (!fs.existsSync(worktreeHistoryPath)) return [];
+
+  try {
+    const worktreeEntries = JSON.parse(fs.readFileSync(worktreeHistoryPath, 'utf8'));
+    if (!Array.isArray(worktreeEntries) || worktreeEntries.length === 0) return [];
+
+    const mainHistory = readHistoryFile();
+    if (mainHistory.error) return worktreeEntries;
+
+    mainHistory.push(...worktreeEntries);
+    writeHistoryFile(mainHistory);
+    return worktreeEntries;
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Migrate a legacy file path to the new path.
@@ -1284,6 +1306,11 @@ async function runMurm(slugs, options = {}) {
         if (mergeResult.success) {
           feature.status = 'murm_complete';
           console.log(`[${timestamp}] ${result.slug}: ${theme.MESSAGES.mergedAndLanded} \u2713`);
+          // Merge per-stage history from worktree before cleanup
+          const merged = mergeWorktreeHistory(feature.worktreePath);
+          if (merged.length > 0) {
+            feature.historyMerged = true;
+          }
           removeWorktree(result.slug);
         } else if (mergeResult.conflict) {
           feature.status = 'merge_conflict';
@@ -1341,6 +1368,29 @@ async function runMurm(slugs, options = {}) {
         }
       });
   }
+
+    // Record batch-level history
+    recordHistory({
+      slug: slugs.join('+'),
+      mode: 'murmuration',
+      status: summary.failed === 0 && summary.conflicts === 0 ? 'success' : 'partial',
+      startedAt: queue.startedAt,
+      completedAt: new Date().toISOString(),
+      totalDurationMs: Date.now() - new Date(queue.startedAt).getTime(),
+      baseBranch,
+      features: queue.features.map(f => ({
+        slug: f.slug,
+        status: f.status,
+        startedAt: f.startedAt,
+        completedAt: f.completedAt
+      })),
+      summary: {
+        total: slugs.length,
+        completed: summary.completed,
+        failed: summary.failed,
+        conflicts: summary.conflicts
+      }
+    });
 
     return { success: summary.failed === 0 && summary.conflicts === 0, summary };
   } finally {

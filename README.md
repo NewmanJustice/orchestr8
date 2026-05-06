@@ -327,6 +327,24 @@ analyzes:               recommends:            calibrates:
 • Trends                • And feedback issues
 ```
 
+### Accessing Module Data
+
+Data is collected from both invocation methods and accessible via CLI commands:
+
+| Data | `/implement-feature` (skill) | `npx murmur8 murm` (CLI) | How to access |
+|------|------------------------------|--------------------------|---------------|
+| **Per-stage timing** (alex, cass, nigel, codey) | Recorded by orchestrating agent | Merged from worktree on successful merge | `npx murmur8 history` |
+| **Feedback ratings** (agent-to-agent) | Recorded by feedback micro-Tasks | Merged from worktree on successful merge | `npx murmur8 history`, `npx murmur8 insights --feedback` |
+| **Token cost per stage** | Recorded by orchestrating agent | Merged from worktree on successful merge | `npx murmur8 history --cost` |
+| **Batch summary** (total duration, feature outcomes) | N/A (single feature) | Recorded at batch completion | `npx murmur8 history` |
+| **Success/failure status** | Recorded per run | Recorded per feature + batch | `npx murmur8 history --stats` |
+| **Retry attempts & strategies** | Recorded on failure | Merged from worktree on successful merge | `npx murmur8 insights --failures` |
+| **Bottleneck analysis** | Derived from history | Derived from history | `npx murmur8 insights --bottlenecks` |
+| **Smart retry recommendations** | Used live during pipeline | Used live during pipeline | Automatic on failure |
+| **Diff preview** | Shown before commit | Shown per worktree before merge | Interactive during pipeline |
+
+**How worktree history merging works:** When `npx murmur8 murm` runs, each feature pipeline executes `/implement-feature` inside an isolated git worktree. The skill records per-stage data to `.claude/pipeline-history.json` within that worktree. After a successful merge, murmur8 reads this file and appends its entries to the main project's history before cleaning up the worktree. Failed/conflicted worktrees preserve their history for debugging.
+
 ## Directory Structure
 
 ```

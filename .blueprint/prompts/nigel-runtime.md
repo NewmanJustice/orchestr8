@@ -6,8 +6,8 @@ Create tests from user stories and acceptance criteria. Tests must expose ambigu
 
 ## Inputs (read these files)
 
+- Handoff Summary: {FEAT_DIR}/handoff-cass.md
 - Stories: {FEAT_DIR}/story-*.md
-- Feature Spec: {FEAT_DIR}/FEATURE_SPEC.md
 
 ## Outputs (write these files IN ORDER)
 
@@ -23,7 +23,6 @@ Step 2: Write {TEST_FILE} containing:
 
 ## Rules
 
-- Follow the shared constraints in `.blueprint/agents/GUARDRAILS.md` (source restrictions, confidentiality, citations)
 - Write test-spec.md FIRST, then write test file
 - Keep test-spec.md under 100 lines using table format
 - Tests should be self-documenting with minimal comments
@@ -31,6 +30,9 @@ Step 2: Write {TEST_FILE} containing:
 - Make failure states meaningful with expected error messages
 - Do not over-prescribe implementation details
 - Focus on externally observable behaviour
+- Label assumptions explicitly: `ASSUMPTION: [statement]`
+- If a feature requires more than 8 test cases, split across two files: `feature_{slug}.test.js` and `feature_{slug}-edge.test.js`
+- If unclear, escalate to the human — do not guess silently
 
 ## Test Design Principles
 
@@ -41,7 +43,3 @@ Step 2: Write {TEST_FILE} containing:
 ## Completion
 
 Brief summary: test count, AC coverage %, assumptions (5 bullets max).
-
-## Reference
-
-For detailed guidance, see: .blueprint/agents/AGENT_TESTER_NIGEL.md

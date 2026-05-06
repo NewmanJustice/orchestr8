@@ -202,12 +202,3 @@ He ensures that what gets built is:
 - coherent over time,
 - and traceable back to a clearly articulated system design — even as that design evolves.
 
----
-
-## Values
-
-Read and apply the team values from: `.blueprint/agents/TEAM_MANIFESTO.md`
-
-## Guardrails
-
-Read and apply the shared guardrails from: `.blueprint/agents/GUARDRAILS.md`

@@ -43,14 +43,14 @@ describe('Story 1: Create Runtime Prompt Template', () => {
     assert.ok(existsSync(templatePath), 'Template file should exist');
 
     const content = readFileSync(templatePath, 'utf-8');
-    const requiredSections = ['role', 'task', 'inputs', 'outputs', 'rules', 'reference'];
+    const requiredSections = ['role', 'task', 'inputs', 'outputs', 'rules', 'completion'];
     const sectionPatterns = [
       /you are.*the/i,
       /##\s*task/i,
       /##\s*inputs/i,
       /##\s*outputs/i,
       /##\s*rules/i,
-      /AGENT_.*\.md|full spec|detailed guidance/i
+      /##\s*completion/i
     ];
 
     sectionPatterns.forEach((pattern, index) => {
@@ -66,12 +66,12 @@ describe('Story 1: Create Runtime Prompt Template', () => {
     assert.ok(/30.*50|30-50/i.test(content), 'Template should mention 30-50 line target');
   });
 
-  it('T-1.3: Template includes full spec reference pattern', () => {
+  it('T-1.3: Template enforces self-contained prompts', () => {
     const templatePath = join(PROMPTS_DIR, 'TEMPLATE.md');
     assert.ok(existsSync(templatePath), 'Template file should exist');
 
     const content = readFileSync(templatePath, 'utf-8');
-    assert.ok(/AGENT_.*\.md|\.blueprint\/agents\//i.test(content), 'Template should reference full agent specs');
+    assert.ok(/self-contained|do NOT reference external/i.test(content), 'Template should enforce self-contained prompts');
   });
 
   it('T-1.4: Prompts directory exists at .blueprint/prompts/', () => {
@@ -136,24 +136,24 @@ describe('Story 2: Create Slim Agent Prompts', () => {
     });
   });
 
-  it('T-2.5: Rules section has 5-8 items per prompt', () => {
+  it('T-2.5: Rules section has 5-11 items per prompt', () => {
     RUNTIME_PROMPTS.forEach(filename => {
       const content = readPromptFile(filename);
       assert.ok(content, `${filename} should exist`);
 
       const rulesSection = extractSection(content, 'Rules');
       const ruleCount = countRulesItems(rulesSection);
-      assert.ok(ruleCount >= 5 && ruleCount <= 8,
-        `${filename} Rules should have 5-8 items, found ${ruleCount}`);
+      assert.ok(ruleCount >= 5 && ruleCount <= 11,
+        `${filename} Rules should have 5-11 items, found ${ruleCount}`);
     });
   });
 
-  it('T-2.6: Each prompt references full agent spec', () => {
+  it('T-2.6: Each prompt is self-contained (no external doc references)', () => {
     RUNTIME_PROMPTS.forEach(filename => {
       const content = readPromptFile(filename);
       assert.ok(content, `${filename} should exist`);
-      assert.ok(/AGENT_.*\.md|\.blueprint\/agents\//i.test(content),
-        `${filename} should reference full agent spec`);
+      assert.ok(!/For detailed guidance, see:|Read and apply.*from:/i.test(content),
+        `${filename} should not reference external docs — prompts must be self-contained`);
     });
   });
 

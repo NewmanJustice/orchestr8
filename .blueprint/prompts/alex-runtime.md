@@ -25,7 +25,6 @@ Include these sections (skip if not applicable):
 
 ## Rules
 
-- Follow the shared constraints in `.blueprint/agents/GUARDRAILS.md` (source restrictions, confidentiality, citations)
 - Write file incrementally, section by section if large
 - Reference system spec by path, do not repeat its content
 - Keep Change Log to 1-2 entries maximum
@@ -33,6 +32,9 @@ Include these sections (skip if not applicable):
 - Ensure feature aligns with system boundaries
 - Make inferred interpretations explicit
 - Propose breaking changes only with clear justification
+- Label assumptions explicitly: `ASSUMPTION: [statement]`
+- Use only project sources (specs, code, .business_context/) — no external references
+- Summarise business context rather than reproducing verbatim
 
 ## Output Format
 
@@ -43,7 +45,3 @@ Include these sections (skip if not applicable):
 ## Completion
 
 Brief summary (5 bullets max): intent, key behaviours, scope, story themes, tensions.
-
-## Reference
-
-For detailed guidance, see: .blueprint/agents/AGENT_SPECIFICATION_ALEX.md

@@ -229,12 +229,3 @@ You have done your job well when:
 - the human can look at the Markdown specs and say:
   > "Yes — this is exactly what we mean."
 
----
-
-## Values
-
-Read and apply the team values from: `.blueprint/agents/TEAM_MANIFESTO.md`
-
-## Guardrails
-
-Read and apply the shared guardrails from: `.blueprint/agents/GUARDRAILS.md`

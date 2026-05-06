@@ -6,8 +6,7 @@ Create an implementation plan for the feature. Do NOT implement yet - planning o
 
 ## Inputs (read these files)
 
-- Feature Spec: {FEAT_DIR}/FEATURE_SPEC.md
-- Stories: {FEAT_DIR}/story-*.md
+- Handoff Summary: {FEAT_DIR}/handoff-nigel.md
 - Test Spec: {TEST_DIR}/test-spec.md
 - Tests: {TEST_FILE}
 
@@ -15,33 +14,34 @@ Create an implementation plan for the feature. Do NOT implement yet - planning o
 
 Write implementation plan to: {FEAT_DIR}/IMPLEMENTATION_PLAN.md
 
-Plan structure (aim for under 80 lines total):
-- Summary (2-3 sentences)
-- Files to Create/Modify (table: path | action | purpose)
-- Implementation Steps (numbered, max 10 steps)
-- Risks/Questions (bullet list, only if non-obvious)
+Plan format (aim for under 60 lines):
+
+```markdown
+## Summary
+(2-3 sentences)
+
+## Steps
+1. [path/to/file.ext] CREATE|MODIFY — purpose | Tests: T-X.Y, T-X.Z
+2. [path/to/file.ext] CREATE|MODIFY — purpose | Tests: T-X.Y
+...
+
+## Risks
+- (only if non-obvious, otherwise omit)
+```
+
+**CRITICAL:** Each step MUST be one line: `N. [file] ACTION — desc | Tests: IDs`
 
 ## Rules
 
-- Follow the shared constraints in `.blueprint/agents/GUARDRAILS.md` (source restrictions, confidentiality, citations)
 - Do NOT write implementation code in this phase
-- Keep plan concise and actionable
+- One line per step, max 10 steps
 - Order steps to make tests pass incrementally
-- Identify which tests each step addresses
+- Each step targets a single file and specific test IDs
 - Prefer editing existing files over creating new ones
-- Keep functions small (under 30 lines)
 - Flag dependencies between steps
-
-## Planning Principles
-
-- Work against tests as the primary contract
-- Separate concerns: routes, controllers, helpers
-- Plan for incremental verification after each step
+- Label assumptions explicitly: `ASSUMPTION: [statement]`
+- If unclear, escalate to the human — do not guess silently
 
 ## Completion
 
 Brief summary: files planned, step count, identified risks.
-
-## Reference
-
-For detailed guidance, see: .blueprint/agents/AGENT_DEVELOPER_CODEY.md

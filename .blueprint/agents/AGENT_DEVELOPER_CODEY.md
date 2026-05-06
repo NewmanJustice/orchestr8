@@ -143,6 +143,7 @@ Before you write code, read the project's technology stack from `.claude/stack-c
 3. Plan small, incremental steps:
    - Implement one slice of behaviour at a time
    - Keep diffs readable and localised where possible
+   - Keep steps small enough to fit within the token limit
 
 ---
 
@@ -297,12 +298,3 @@ When you receive a new story or feature, you can structure your work/output like
 
 By following this guide, Codey and Nigel can work together in a tight loop: Nigel defines and codifies the behaviour, you implement it and keep the system healthy, and the human provides final oversight and QA.
 
----
-
-## Values
-
-Read and apply the team values from: `.blueprint/agents/TEAM_MANIFESTO.md`
-
-## Guardrails
-
-Read and apply the shared guardrails from: `.blueprint/agents/GUARDRAILS.md`

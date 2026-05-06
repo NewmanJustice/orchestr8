@@ -211,6 +211,12 @@ The pipeline includes validation, smart routing, feedback loops, and history tra
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
+│  Feedback micro-Task: Cass reviews Alex's spec                  │
+│  • Quality gate: proceed / pause / revise                       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
 │  Smart Routing (v2.7)                                           │
 │  • Classify feature as technical or user-facing                 │
 │  • Technical → skip Cass (saves ~25-40k tokens)                 │
@@ -229,13 +235,25 @@ The pipeline includes validation, smart routing, feedback loops, and history tra
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Nigel (Tests) + Handoff Summary                                │
-│         │                                                       │
-│         ▼                                                       │
-│  Codey rates Nigel → Quality Gate                               │
-│         │                                                       │
-│         ▼                                                       │
-│  Codey (Plan → Implement)                                       │
+│  Feedback micro-Task: Nigel reviews Cass's stories              │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Nigel (Test Spec + Handoff) → Nigel (Executable Tests)         │
+│  • Split into two atomic calls for token efficiency             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Feedback micro-Task: Codey reviews Nigel's tests               │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Codey (Plan) → Codey (Implement per-step)                      │
+│  • Plan uses strict parseable format                            │
+│  • Orchestrator spawns one Task per implementation step         │
 └─────────────────────────────────────────────────────────────────┘
                               │
                     On Failure│
@@ -320,13 +338,15 @@ your-project/
 │   │   ├── AGENT_TESTER_NIGEL.md
 │   │   ├── AGENT_DEVELOPER_CODEY.md
 │   │   └── GUARDRAILS.md          # Shared guardrails (v2.7)
-│   ├── prompts/                   # Slim runtime prompts (v2.7)
+│   ├── prompts/                   # Self-contained runtime prompts (v4.4)
 │   │   ├── TEMPLATE.md
 │   │   ├── alex-runtime.md
 │   │   ├── cass-runtime.md
 │   │   ├── nigel-runtime.md
 │   │   ├── codey-plan-runtime.md
-│   │   └── codey-implement-runtime.md
+│   │   ├── codey-implement-runtime.md
+│   │   ├── skill-murm-mode.md     # Murmuration steps (loaded on demand)
+│   │   └── skill-error-recovery.md # Error handling (loaded on failure)
 │   ├── templates/                 # Spec and output templates
 │   │   ├── SYSTEM_SPEC.md
 │   │   ├── FEATURE_SPEC.md
@@ -357,15 +377,15 @@ your-project/
 
 ## Agent Guardrails
 
-All agents follow strict guardrails to ensure quality:
+All agents follow strict guardrails enforced via inlined rules in each self-contained runtime prompt. The authoritative source is `.blueprint/agents/GUARDRAILS.md`, with critical rules inlined directly into agent prompts so sub-agents never need to load external files at runtime.
 
 | Guardrail | Description |
 |-----------|-------------|
 | **Source Restrictions** | Only use provided inputs (specs, code, business_context) |
 | **Prohibited Sources** | No social media, forums, external APIs, training data for domain facts |
-| **Citation Requirements** | All claims must cite source files |
+| **Assumption Labeling** | All assumptions must be explicitly labeled |
 | **Confidentiality** | Business context treated as confidential |
-| **Escalation Protocol** | Clear rules for when to ask vs assume |
+| **Escalation Protocol** | Clear rules for when to ask vs assume — flag ambiguity, don't guess |
 
 ## Self-Improvement Loop
 
@@ -423,21 +443,21 @@ npx murmur8 init
 
 Both CLIs execute the same pipeline: Alex → Cass → Nigel → Codey. The skill uses each CLI's native agent/task mechanism.
 
-## Token Efficiency (v2.7)
+## Token Efficiency (v4.4)
 
-Version 2.7 introduces several optimizations to reduce token usage:
+The pipeline is optimised to operate within strict token limits (4096 output, 1024 thinking per sub-agent):
 
-| Optimization | Savings | Description |
-|--------------|---------|-------------|
-| **Shared Guardrails** | ~1,200 tokens | Single GUARDRAILS.md instead of duplicated in each agent spec |
-| **Slim Runtime Prompts** | ~5,200 tokens | 30-50 line prompts instead of 200-400 line full specs |
-| **Upstream Summaries** | ~2,000-4,000 tokens | Handoff summaries between agents instead of full artifacts |
-| **Template Extraction** | ~800 tokens | Templates moved to separate files, loaded on demand |
-| **Lazy Business Context** | Variable | Only loaded when feature spec references it |
-| **Compressed Feedback** | ~400 tokens | 3-line feedback prompts instead of 7-line |
+| Optimization | Impact | Description |
+|--------------|--------|-------------|
+| **Self-contained prompts** | ~660 lines/call eliminated | Agents never read full specs, guardrails, manifesto, or rituals at runtime |
+| **Trusted handoff chain** | ~200-400 tokens/call saved | Each agent reads only the upstream handoff + its immediate inputs |
+| **Split Nigel** | Prevents truncation | Test spec and executable tests are separate atomic calls |
+| **Orchestrator-driven Codey** | Prevents truncation | One Task per implementation step instead of monolithic implement call |
+| **Feedback micro-Tasks** | ~50 output tokens each | Separate review calls don't consume the main agent's output budget |
+| **Hybrid SKILL.md** | 48% smaller | Murmuration and error recovery loaded on demand, not always |
+| **Strict plan format** | Zero parsing overhead | Machine-parseable one-liner per step, orchestrator splits on regex |
 | **Smart Story Routing** | ~25,000-40,000 tokens | Skip Cass for technical features |
-
-**Total estimated savings: 10,000+ tokens per pipeline run** (more for technical features)
+| **Lazy Business Context** | Variable | Only loaded when feature spec references it |
 
 ## Cost Tracking
 
@@ -517,8 +537,8 @@ murmur8 murm <slug-a> <slug-b> <slug-c>
     │  Spawn Pipelines                      │
     │  (max 3 concurrent by default)        │
     │                                       │
-    │  Each runs: Alex → Nigel → Codey      │
-    │  in its isolated worktree             │
+    │  Each runs full pipeline in isolation:  │
+    │  Alex → [Cass] → Nigel → Codey       │
     └───────────────────────────────────────┘
                     │
                     ▼

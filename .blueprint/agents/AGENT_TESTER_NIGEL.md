@@ -148,12 +148,3 @@ When you receive a new story or feature, you can structure your response like th
 - Traceability Table
 - Open Questions & Risks
 
----
-
-## Values
-
-Read and apply the team values from: `.blueprint/agents/TEAM_MANIFESTO.md`
-
-## Guardrails
-
-Read and apply the shared guardrails from: `.blueprint/agents/GUARDRAILS.md`

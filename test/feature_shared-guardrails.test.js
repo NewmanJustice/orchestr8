@@ -53,30 +53,39 @@ describe('Story: Extract Guardrails to Shared File', () => {
     });
   });
 
-  describe('AC-2: Agent specs reference shared file', () => {
+  describe('AC-2: Runtime prompts inline guardrail rules', () => {
 
-    it('T-2.1: AGENT_SPECIFICATION_ALEX.md references GUARDRAILS.md', () => {
-      const filePath = path.join(AGENTS_DIR, 'AGENT_SPECIFICATION_ALEX.md');
-      const content = fs.readFileSync(filePath, 'utf-8');
-      assert.match(content, GUARDRAILS_REFERENCE_PATTERN);
+    const PROMPTS_DIR = path.join(ROOT_DIR, '.blueprint', 'prompts');
+    const RUNTIME_PROMPTS = [
+      'alex-runtime.md',
+      'cass-runtime.md',
+      'nigel-runtime.md',
+      'codey-plan-runtime.md',
+      'codey-implement-runtime.md'
+    ];
+
+    it('T-2.1: Runtime prompts include assumption labeling rule', () => {
+      RUNTIME_PROMPTS.forEach(filename => {
+        const content = fs.readFileSync(path.join(PROMPTS_DIR, filename), 'utf-8');
+        assert.match(content, /assumption/i,
+          `${filename} should inline the assumption labeling rule from guardrails`);
+      });
     });
 
-    it('T-2.2: AGENT_BA_CASS.md references GUARDRAILS.md', () => {
-      const filePath = path.join(AGENTS_DIR, 'AGENT_BA_CASS.md');
-      const content = fs.readFileSync(filePath, 'utf-8');
-      assert.match(content, GUARDRAILS_REFERENCE_PATTERN);
+    it('T-2.2: Runtime prompts include escalation or ambiguity handling rule', () => {
+      RUNTIME_PROMPTS.forEach(filename => {
+        const content = fs.readFileSync(path.join(PROMPTS_DIR, filename), 'utf-8');
+        assert.match(content, /escalat|unclear|ambiguit|do not guess|flag to the human/i,
+          `${filename} should inline an escalation/ambiguity handling rule from guardrails`);
+      });
     });
 
-    it('T-2.3: AGENT_TESTER_NIGEL.md references GUARDRAILS.md', () => {
-      const filePath = path.join(AGENTS_DIR, 'AGENT_TESTER_NIGEL.md');
-      const content = fs.readFileSync(filePath, 'utf-8');
-      assert.match(content, GUARDRAILS_REFERENCE_PATTERN);
-    });
-
-    it('T-2.4: AGENT_DEVELOPER_CODEY.md references GUARDRAILS.md', () => {
-      const filePath = path.join(AGENTS_DIR, 'AGENT_DEVELOPER_CODEY.md');
-      const content = fs.readFileSync(filePath, 'utf-8');
-      assert.match(content, GUARDRAILS_REFERENCE_PATTERN);
+    it('T-2.3: Runtime prompts do not reference external docs', () => {
+      RUNTIME_PROMPTS.forEach(filename => {
+        const content = fs.readFileSync(path.join(PROMPTS_DIR, filename), 'utf-8');
+        assert.ok(!/For detailed guidance, see:|Read and apply.*from:/i.test(content),
+          `${filename} should be self-contained — no external doc references`);
+      });
     });
   });
 

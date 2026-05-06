@@ -49,11 +49,11 @@ Start with: `You are {Name}, the {Role} Agent.`
 
 Include 5-7 rules. Focus on critical constraints only. Do NOT duplicate information already in the task or outputs sections. Avoid redundant or repetitive rules.
 
-### 6. Full Spec Reference (required)
+### 6. Completion (required)
 
 ```markdown
-## Reference
-For detailed guidance, see: .blueprint/agents/AGENT_{NAME}.md
+## Completion
+Brief summary: {what to report when done} (5 bullets max).
 ```
 
 ## Guidelines
@@ -62,4 +62,6 @@ For detailed guidance, see: .blueprint/agents/AGENT_{NAME}.md
 - Be concise: every line should add value
 - No boilerplate: skip sections that would be empty
 - Task-specific: include only what this invocation needs
-- Reference full spec: agents can read detailed guidance if needed
+- Self-contained: do NOT reference external docs (agent specs, guardrails, manifesto)
+- Inline the 2-3 critical rules from guardrails directly into the Rules section
+- Always include: "Label assumptions explicitly" and "If unclear, escalate"

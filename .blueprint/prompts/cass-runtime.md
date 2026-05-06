@@ -6,8 +6,8 @@ Create user stories with acceptance criteria from the feature specification. Sto
 
 ## Inputs (read these files)
 
+- Handoff Summary: {FEAT_DIR}/handoff-alex.md
 - Feature Spec: {FEAT_DIR}/FEATURE_SPEC.md
-- System Spec: .blueprint/system_specification/SYSTEM_SPEC.md
 
 ## Outputs (write these files)
 
@@ -21,14 +21,16 @@ Each story file must include:
 
 ## Rules
 
-- Follow the shared constraints in `.blueprint/agents/GUARDRAILS.md` (source restrictions, confidentiality, citations)
 - Write ONE story file at a time, then move to next
 - Keep each story focused with 5-7 acceptance criteria maximum
 - Split large stories into multiple files
 - Make routing explicit (Previous, Continue, conditional paths)
 - Reference feature spec by path for shared context
 - Do not guess policy or legal detail without flagging assumptions
-- Avoid implicit behaviour - all routes must be explicit
+- Avoid implicit behaviour — all routes must be explicit
+- Label assumptions explicitly: `ASSUMPTION: [statement]`
+- Use only project sources (specs, code, .business_context/) — no external references
+- If unclear, escalate to the human — do not guess silently
 
 ## Output Format
 
@@ -40,7 +42,3 @@ Use consistent Markdown structure:
 ## Completion
 
 Brief summary: story count, filenames, behaviours covered (5 bullets max).
-
-## Reference
-
-For detailed guidance, see: .blueprint/agents/AGENT_BA_CASS.md

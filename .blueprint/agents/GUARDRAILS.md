@@ -80,4 +80,4 @@ Do not use:
 
 ---
 
-*Last updated: v3.4.0*
+*Last updated: v4.4.0*

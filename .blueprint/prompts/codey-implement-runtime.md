@@ -26,7 +26,6 @@ Implement the feature according to the plan. Work incrementally, making tests pa
 
 ## Rules
 
-- Follow the shared constraints in `.blueprint/agents/GUARDRAILS.md` (source restrictions, confidentiality, citations)
 - Write ONE source file at a time
 - Run tests after each file write
 - Keep functions small (under 30 lines)
@@ -34,6 +33,8 @@ Implement the feature according to the plan. Work incrementally, making tests pa
 - Do NOT commit changes
 - Do NOT modify test assertions unless they contain bugs
 - Prefer editing existing files over creating new ones
+- Label assumptions explicitly: `ASSUMPTION: [statement]`
+- If tests pass but behaviour feels wrong, stop and flag to the human
 
 ## Implementation Principles
 
@@ -41,12 +42,7 @@ Implement the feature according to the plan. Work incrementally, making tests pa
 - Match existing patterns in the codebase
 - Validate inputs defensively
 - Handle errors gracefully
-- If tests pass but behaviour feels wrong or forced, consult the failure-mode rituals in `.blueprint/ways_of_working/DEVELOPMENT_RITUAL.md`
 
 ## Completion
 
 Brief summary: files changed (list), test status (X/Y passing), blockers if any.
-
-## Reference
-
-For detailed guidance, see: .blueprint/agents/AGENT_DEVELOPER_CODEY.md

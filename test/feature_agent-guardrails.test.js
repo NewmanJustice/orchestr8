@@ -14,13 +14,14 @@ const AGENT_FILES = [
 const AGENTS_DIR = path.join(__dirname, '..', '.blueprint', 'agents');
 const GUARDRAILS_FILE = path.join(AGENTS_DIR, 'GUARDRAILS.md');
 
-// Helper: Read agent spec file content (includes shared GUARDRAILS.md if referenced)
+// Helper: Read agent spec file content combined with shared GUARDRAILS.md
+// Runtime prompts inline critical guardrail rules; full rules live in GUARDRAILS.md
 function readAgentSpec(filename) {
   const filePath = path.join(AGENTS_DIR, filename);
   let content = fs.readFileSync(filePath, 'utf-8').toLowerCase();
 
-  // If agent spec references shared guardrails, include that content too
-  if (content.includes('guardrails.md') && fs.existsSync(GUARDRAILS_FILE)) {
+  // Always include guardrails content — it's the shared rule source
+  if (fs.existsSync(GUARDRAILS_FILE)) {
     const guardrailsContent = fs.readFileSync(GUARDRAILS_FILE, 'utf-8').toLowerCase();
     content += '\n' + guardrailsContent;
   }
